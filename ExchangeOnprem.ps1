@@ -19,15 +19,15 @@ function Connect-KBAExchangeOnprem
         $Script:Config.ExchangeOnprem.User
         $Script:Config.ExchangeOnprem.Password | ConvertTo-SecureString
     )
+    $params = @{
+        Name = 'KBAExchOnprem'
+        ConfigurationName = 'Microsoft.Exchange'
+        ConnectionUri = "http://$server/PowerShell/"
+        Authentication = 'Kerberos'
+        Credential = $credential
+    }
     try
     {
-        $params = @{
-            Name = 'KBAExchOnprem'
-            ConfigurationName = 'Microsoft.Exchange'
-            ConnectionUri = "http://$server/PowerShell/"
-            Authentication = 'Kerberos'
-            Credential = $credential
-        }
         $session = New-PSSession @params
         $params = @{
             Session = $session
@@ -850,25 +850,30 @@ function Send-KBAOnpremWelcomeMail
               Delay      = 0
             }
         }
-        $params = @{
-            SmtpServer = $Script:Config.ExchangeOnprem.WelcomeMail.Server
-            From = $Script:Config.ExchangeOnprem.WelcomeMail.From
-            To = $UserPrincipalName
-            Subject = $Script:Config.ExchangeOnprem.WelcomeMail.Subject
-            Encoding = 'UTF8'
-            BodyAsHtml = $true
-            Body = $Script:Config.ExchangeOnprem.WelcomeMail.Body
-        }
+        # Use SmtpClient instead of Send-MailMessage since the latter
+        # always tries to authenticate with default credentials. A gMSA is
+        # not allowed to authenticate to our Exchange SMTP receive connector.
+        $smtpClient = New-Object -TypeName 'System.Net.Mail.SmtpClient'
+        $smtpClient.UseDefaultCredentials = $false
+        $smtpClient.Host = $Script:Config.ExchangeOnprem.WelcomeMail.Server
+        $msg = New-Object -TypeName 'System.Net.Mail.MailMessage'
+        $msg.BodyEncoding = [System.Text.Encoding]::UTF8
+        $msg.SubjectEncoding = [System.Text.Encoding]::UTF8
+        $msg.IsBodyHtml = $true
+        $msg.From = $Script:Config.ExchangeOnprem.WelcomeMail.From
+        $msg.Subject = $Script:Config.ExchangeOnprem.WelcomeMail.Subject
+        $msg.Body = $Script:Config.ExchangeOnprem.WelcomeMail.Body
+        $msg.To.Add($UserPrincipalName)
         try
         {
-            Send-MailMessage @params
+            $smtpClient.Send($msg)
         }
         catch
         {
             throw [pscustomobject]@{
                 Target     = $UserPrincipalName
                 Activity   = $MyInvocation.MyCommand.Name
-                Reason     = 'Send-MailMessage failed'
+                Reason     = 'SmtpClient Send failed'
                 Message    = $_.Exception.Message
                 RetryCount = 3
                 Delay      = 10

@@ -6,21 +6,19 @@ function Import-KBALyncOnpremModule
 {
     try
     {
-        Import-Module -Name 'SkypeForBusiness' -Prefix 'Onprem'
+        Import-Module -Name 'SkypeForBusiness' -Prefix 'Onprem' -ErrorAction Stop
     }
     catch
     {
         throw [pscustomobject]@{
-            Target     = 'Lync module'
+            Target     = 'SkypeForBusiness module'
             Activity   = $MyInvocation.MyCommand.Name
             Reason     = 'Import-Module failed'
             Message    = $_.Exception.Message
             RetryCount = 3
             Delay      = 5
         }
-
     }
-
 }
 
 function Test-KBAOnpremCSUser
@@ -36,14 +34,14 @@ function Test-KBAOnpremCSUser
         $isEnabled = $false
         try
         {
-            if ((Get-OnpremCsUser -Identity $UserPrincipalName))
+            if ((Get-OnpremCsUser -Identity $UserPrincipalName -ErrorAction Stop))
             {
                 $isEnabled = $true
             }
         }
         catch
         {
-            if ($_.Exception.Data['LyncId'] -notlike '*ObjectNotFoundIdentity')
+            if ($_.Exception.Message -notlike 'Management object not found*')
             {
                 throw
             }
@@ -84,8 +82,8 @@ function Grant-KBAOnpremCSConferencingPolicy
             throw [pscustomobject]@{
                 Target     = $UserPrincipalName
                 Activity   = $MyInvocation.MyCommand.Name
-                Reason     = 'Not Lync enabled'
-                Message    = 'Target is not Lync enabled.'
+                Reason     = 'Not Skype enabled'
+                Message    = 'Target is not Skype enabled.'
                 RetryCount = 3
                 Delay      = 5
             }
@@ -96,7 +94,7 @@ function Grant-KBAOnpremCSConferencingPolicy
         }
         try
         {
-            Grant-OnpremCsConferencingPolicy @params
+            Grant-OnpremCsConferencingPolicy @params -ErrorAction Stop
         }
         catch
         {
@@ -142,15 +140,15 @@ function Enable-KBAOnpremCSUser
             throw [pscustomobject]@{
                 Target     = $UserPrincipalName
                 Activity   = $MyInvocation.MyCommand.Name
-                Reason     = 'Already Lync enabled'
-                Message    = 'Target is already Lync enabled.'
+                Reason     = 'Already Skype enabled'
+                Message    = 'Target is already Skype enabled.'
                 RetryCount = 0
                 Delay      = 0
             }
         }
         $params = @{
             Identity = $UserPrincipalName
-            RegistrarPool = $Script:Config.LyncOnprem.RegistrarPool
+            RegistrarPool = $Script:Config.SkypeOnprem.RegistrarPool
             SipAddress = 'sip:' + $UserPrincipalName
         }
         try

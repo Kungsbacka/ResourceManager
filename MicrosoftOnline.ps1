@@ -4,13 +4,13 @@ $Global:ErrorActionPreference = 'Stop'
 
 function Connect-KBAMsolService
 {
+    Import-Module -Name 'MSOnline' -DisableNameChecking
+    $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
+        $Script:Config.Office365.User
+        $Script:Config.Office365.Password | ConvertTo-SecureString
+    )
     try
     {
-        Import-Module -Name 'MSOnline' -DisableNameChecking
-        $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
-            $Script:Config.Office365.User
-            $Script:Config.Office365.Password | ConvertTo-SecureString
-        )
         Connect-MsolService -Credential $credential
     }
     catch
@@ -19,7 +19,7 @@ function Connect-KBAMsolService
             Time       = [DateTime]::Now
             Target     = 'MSOnline'
             Activity   = $MyInvocation.MyCommand.Name
-            Reason     = 'Import-Module/Connect-MsolService failed'
+            Reason     = 'Connect-MsolService failed'
             Message    = $_.Exception.Message
             RetryCount = 100
             Delay      = 5

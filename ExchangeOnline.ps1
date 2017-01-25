@@ -13,21 +13,21 @@ Enum TestMailboxResult
 
 function Connect-KBAExchangeOnline
 {
+    Get-PSSession -Name 'KBAExchOnline' -ErrorAction SilentlyContinue | Remove-PSSession
+    $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
+        $Script:Config.Office365.User
+        $Script:Config.Office365.Password | ConvertTo-SecureString
+    )
+    $params = @{
+        Name = 'KBAExchOnline'
+        ConfigurationName = 'Microsoft.Exchange'
+        ConnectionUri = 'https://outlook.office365.com/powershell-liveid/'
+        Authentication = 'Basic'
+        AllowRedirection = $true
+        Credential = $credential
+    }
     try
     {
-        Get-PSSession -Name 'KBAExchOnline' -ErrorAction SilentlyContinue | Remove-PSSession
-        $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
-            $Script:Config.Office365.User
-            $Script:Config.Office365.Password | ConvertTo-SecureString
-        )
-        $params = @{
-            Name = 'KBAExchOnline'
-            ConfigurationName = 'Microsoft.Exchange'
-            ConnectionUri = 'https://outlook.office365.com/powershell-liveid/'
-            Authentication = 'Basic'
-            AllowRedirection = $true
-            Credential = $credential
-        }
         $session = New-PSSession @params
         $params = @{
             Session = $session

@@ -5,7 +5,7 @@ $Global:ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\ExchangeOnline.ps1"
 . "$PSScriptRoot\ExchangeOnprem.ps1"
 . "$PSScriptRoot\MicrosoftOnline.ps1"
-. "$PSScriptRoot\LyncOnprem.ps1"
+. "$PSScriptRoot\SkypeOnprem.ps1"
 . "$PSScriptRoot\HomeFolder.ps1"
 . "$PSScriptRoot\SamlId.ps1"
 . "$PSScriptRoot\Logger.ps1"
@@ -107,13 +107,13 @@ $Script:TaskDefinitions = @{
     }
     EnableCSUser = @{
         Command = 'Enable-KBAOnpremCSUser'
-        Initializer = 'Import-KBALyncOnpremModule'
+        Initializer = 'Import-KBASkypeOnpremModule'
         Parameters = @()
         OptionalParameters = @()
     }
     GrantCSConferencingPolicy = @{
         Command = 'Grant-KBAOnpremCSConferencingPolicy'
-        Initializer = 'Import-KBALyncOnpremModule'
+        Initializer = 'Import-KBASkypeOnpremModule'
         Parameters = @('ConferencingPolicy')
         OptionalParameters = @()
     }
