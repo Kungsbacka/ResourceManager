@@ -2,6 +2,14 @@
 $Global:ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\Config.ps1"
 
+Enum TaskResult
+{
+    Success
+    Failure
+    Retry
+    Wait
+}
+
 function Update-TaskLogEntry
 {
     param
@@ -10,7 +18,7 @@ function Update-TaskLogEntry
         [int]
         $TaskId,
         [Parameter(Mandatory = $true)]
-        [AccountTasks.TaskResult]
+        [TaskResult]
         $Result,
         [Parameter(Mandatory = $false)]
         [switch]
@@ -18,10 +26,18 @@ function Update-TaskLogEntry
     )
     process
     {
+        if ($EndTask)
+        {
+            $end = 1
+        }
+        else
+        {
+            $end = 0
+        }
         Invoke-StoredProcedure -Procedure 'dbo.spUpdateTaskLogEntry' -Parameters @{
             TaskId = $TaskId
             Status = $Result.ToString()
-            EndTask = [int]($EndTask.ToBool())
+            End = $end
         }
     }
 }

@@ -6,3 +6,5 @@ Resource Manager is a tool for creating user resources. It can currently:
 * Enable Skype on-prem
 * Create home folder
 * Create SAML identity
+
+Just like Lifecycle Manager, Resource Manager is built specifically for Kungsbacka kommun and is not meant for general use.

@@ -15,6 +15,10 @@ function Connect-KBAExchangeOnprem
 {
     $server = $Script:Config.ExchangeOnprem.Servers | Get-Random
     Get-PSSession -Name 'KBAExchOnprem' -ErrorAction SilentlyContinue | Remove-PSSession
+    $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
+        $Script:Config.ExchangeOnprem.User
+        $Script:Config.ExchangeOnprem.Password | ConvertTo-SecureString
+    )
     try
     {
         $params = @{
@@ -22,6 +26,7 @@ function Connect-KBAExchangeOnprem
             ConfigurationName = 'Microsoft.Exchange'
             ConnectionUri = "http://$server/PowerShell/"
             Authentication = 'Kerberos'
+            Credential = $credential
         }
         $session = New-PSSession @params
         $params = @{
@@ -280,6 +285,7 @@ function Set-KBAOnpremCalendar
             }
         }
         $params = @{
+            Identity = $UserPrincipalName
             WorkingHoursTimeZone = $Script:Config.ExchangeOnprem.Calendar.WorkingHoursTimeZone
             ShowWeekNumbers = $Script:Config.ExchangeOnprem.Calendar.ShowWeekNumbers
             WeekStartDay = $Script:Config.ExchangeOnprem.Calendar.WeekStartDay

@@ -16,20 +16,17 @@ function Connect-KBAExchangeOnline
     try
     {
         Get-PSSession -Name 'KBAExchOnline' -ErrorAction SilentlyContinue | Remove-PSSession
-        $credentialParams = @{
-            TypeName = 'System.Management.Automation.PSCredential'
-            ArgumentList = @(
-                $Script:Config.Office365.MsolUser
-                $Script:Config.Office365.MsolPassword | ConvertTo-SecureString
-            )
-        }
+        $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
+            $Script:Config.Office365.User
+            $Script:Config.Office365.Password | ConvertTo-SecureString
+        )
         $params = @{
             Name = 'KBAExchOnline'
             ConfigurationName = 'Microsoft.Exchange'
             ConnectionUri = 'https://outlook.office365.com/powershell-liveid/'
             Authentication = 'Basic'
             AllowRedirection = $true
-            Credential = New-Object @credentialParams
+            Credential = $credential
         }
         $session = New-PSSession @params
         $params = @{

@@ -7,14 +7,11 @@ function Connect-KBAMsolService
     try
     {
         Import-Module -Name 'MSOnline' -DisableNameChecking
-        $params = @{
-            TypeName = 'System.Management.Automation.PSCredential'
-            ArgumentList = @(
-                $Script:Config.Office365.MsolUser
-                $Script:Config.Office365.MsolPassword | ConvertTo-SecureString
-            )
-        }
-        Connect-MsolService -Credential (New-Object @params)
+        $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
+            $Script:Config.Office365.User
+            $Script:Config.Office365.Password | ConvertTo-SecureString
+        )
+        Connect-MsolService -Credential $credential
     }
     catch
     {

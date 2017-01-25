@@ -6,7 +6,7 @@ function Import-KBALyncOnpremModule
 {
     try
     {
-        Import-Module -Name 'Lync' -Prefix 'Onprem'
+        Import-Module -Name 'SkypeForBusiness' -Prefix 'Onprem'
     }
     catch
     {
