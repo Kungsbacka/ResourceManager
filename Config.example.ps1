@@ -13,8 +13,8 @@ $Config = @{
     MicrosoftOnline = @{
         AccountName = '<License account name>'
     }
-    LyncOnprem = @{
-        RegistrarPool = '<Lync/Skype pool FQDN>'
+    SkypeOnprem = @{
+        RegistrarPool = '<Skype pool FQDN>'
     }
     # Office 365 credentials. Password must be encrypted with the same credentials that is running the script.
     # Start a new PowerShell prompt as that user and run (Get-Credential).Password | ConvertFrom-SecureString

@@ -2,7 +2,7 @@
 $Global:ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\Config.ps1"
 
-function Import-KBALyncOnpremModule
+function Import-KBASkypeOnpremModule
 {
     try
     {

@@ -1,7 +1,13 @@
 ﻿# Make all error terminating errors
-$Global:ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
+# Import-Module statements below are a workaround to make the script run with a gMSA
+# https://powershell.org/forums/topic/command-exist-and-does-not-exist-at-the-same-time/#post-58156
+Import-Module -Name 'Microsoft.PowerShell.Utility'
+Import-Module -Name 'Microsoft.PowerShell.Management'
+Import-Module -Name 'Microsoft.PowerShell.Security'
 
 . "$PSScriptRoot\Config.ps1"
+. "$PSScriptRoot\TaskDefinition.ps1"
 . "$PSScriptRoot\ExchangeOnline.ps1"
 . "$PSScriptRoot\ExchangeOnprem.ps1"
 . "$PSScriptRoot\MicrosoftOnline.ps1"
@@ -18,128 +24,17 @@ Enum TaskResult
     Wait
 }
 
-$Script:ExecutedInitializers = @()
-
-$Script:TaskDefinitions = @{
-    EnableMailbox = @{
-        Command = 'Enable-KBAOnpremMailbox'
-        Initializer = 'Connect-KBAExchangeOnprem'
-        Parameters = @('Type')
-        OptionalParameters = @()
-    }
-    EnableRemoteMailbox = @{
-        Command = 'Enable-KBAOnpremRemoteMailbox'
-        Initializer = 'Connect-KBAExchangeOnprem'
-        Parameters = @()
-        OptionalParameters = @()
-    }
-    ConfigureMailbox = @{
-        Command = 'Set-KBAOnpremMailbox'
-        Initializer = 'Connect-KBAExchangeOnprem'
-        Parameters = @('Type')
-        OptionalParameters = @()
-    }
-    ConfigureRemoteMailbox = @{
-        Command = 'Set-KBAOnpremRemoteMailbox'
-        Initializer = 'Connect-KBAExchangeOnprem'
-        Parameters = @()
-        OptionalParameters = @()
-    }
-    ConfigureOwa = @{
-        Command = 'Set-KBAOnpremOwa'
-        Initializer = 'Connect-KBAExchangeOnprem'
-        Parameters = @('Type')
-        OptionalParameters = @()
-    }
-    ConfigureCalendar = @{
-        Command = 'Set-KBAOnpremCalendar'
-        Initializer = 'Connect-KBAExchangeOnprem'
-        Parameters = @('Type')
-        OptionalParameters = @()
-    }
-    ConfigureMessage = @{
-        Command = 'Set-KBAOnpremMailboxMessageConfiguration'
-        Initializer = 'Connect-KBAExchangeOnprem'
-        Parameters = @()
-        OptionalParameters = @()
-    }
-    ConfigureMailboxAutoReplyTask = @{
-        Command = 'Set-KBAOnpremMailboxAutoReplyState'
-        Initializer = 'Connect-KBAExchangeOnprem'
-        Parameters = @('Enabled')
-        OptionalParameters = @('Message')
-    }
-    SendWelcomeMail = @{
-        Command = 'Send-KBAOnpremWelcomeMail'
-        Initializer = $null
-        Parameters = @('Type')
-        OptionalParameters = @()
-    }
-    ConfigureOnlineOwa = @{
-        Command = 'Set-KBAOnlineOwa'
-        Initializer = 'Connect-KBAExchangeOnline'
-        Parameters = @()
-        OptionalParameters = @()
-    }
-    HomeFolder = @{
-        Command = 'New-HomeFolder'
-        Initializer = $null
-        Parameters = @('Path')
-        OptionalParameters = @()
-    }
-    SamlId = @{
-        Command = 'Set-SamlId'
-        Initializer = $null
-        Parameters = @()
-        OptionalParameters = @()
-    }
-    MsolEnableSync = @{
-        Command = 'Enable-KBAMsolSync'
-        Initializer = $null
-        Parameters = @()
-        OptionalParameters = @()
-    }
-    MsolLicense = @{
-        Command = 'Set-KBAMsolUserLicense'
-        Initializer = 'Connect-KBAMsolService'
-        Parameters = @('License')
-        OptionalParameters = @()
-    }
-    EnableCSUser = @{
-        Command = 'Enable-KBAOnpremCSUser'
-        Initializer = 'Import-KBASkypeOnpremModule'
-        Parameters = @()
-        OptionalParameters = @()
-    }
-    GrantCSConferencingPolicy = @{
-        Command = 'Grant-KBAOnpremCSConferencingPolicy'
-        Initializer = 'Import-KBASkypeOnpremModule'
-        Parameters = @('ConferencingPolicy')
-        OptionalParameters = @()
-    }
-    Wait = @{
-        Command = $null
-        Initializer = $null
-        Parameters = @('Minutes')    
-        OptionalParameters = @()
-    }
-    Debug = @{
-        Command = 'Set-Content'
-        Initializer = $null
-        Parameters = @('Path')
-        OptionalParameters = @()
-    }
-}
+$ExecutedInitializers = @()
 
 function Start-Task
 {
     param
     (
         [Parameter(Mandatory = $true)]
-        [System.Object]
+        [object]
         $Task,
         [Parameter(Mandatory = $true)]
-        [System.Object]
+        [object]
         $Target,
         [Parameter(Mandatory = $false)]
         [object]
@@ -245,7 +140,6 @@ function Start-Task
             }
             Add-Member @params
         }
-        # Is it a "Wait" task?
         if ($Task.TaskName -eq 'Wait')
         {
             if ($Task.WaitUntil -eq $null)
@@ -351,13 +245,13 @@ catch
 $params = @{
     Filter = {ExtensionAttribute9 -like '*' -and Enabled -eq $true}
     Properties = @(
-        'UserPrincipalName'
-        'SamAccountName'
-        'ExtensionAttribute9'
-        'DisplayName'
         'Department'
-        'Title'
+        'DisplayName'
+        'ExtensionAttribute9'
+        'SamAccountName'
         'TelephoneNumber'
+        'Title'
+        'UserPrincipalName'
     )
 }
 try
