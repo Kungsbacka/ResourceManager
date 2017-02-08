@@ -3,6 +3,9 @@ $Config = @{
     Logger = @{
         ConnectionString = 'Server=<Server>;Database=<Database>;Integrated Security=True'
     }
+    Environment = @{
+        LocalAppData = '<path to writable dir>'
+    }
     HomeFolder = @{
         Domain = '<AD domain>'
         StudentShare = '<Path to share>'
@@ -16,7 +19,8 @@ $Config = @{
     SkypeOnprem = @{
         RegistrarPool = '<Skype pool FQDN>'
     }
-    # Office 365 credentials. Password must be encrypted with the same credentials that is running the script.
+    # Office 365 credentials for an account with user administration privileges.
+    # Password must be encrypted with the same credentials that is running the script.
     # Start a new PowerShell prompt as that user and run (Get-Credential).Password | ConvertFrom-SecureString
     # to encrypt the password.
     Office365 = @{

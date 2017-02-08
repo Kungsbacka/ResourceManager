@@ -1,10 +1,17 @@
 ﻿# Make all error terminating errors
 $ErrorActionPreference = 'Stop'
+
 # Import-Module statements below are a workaround to make the script run with a gMSA
-# https://powershell.org/forums/topic/command-exist-and-does-not-exist-at-the-same-time/#post-58156
 Import-Module -Name 'Microsoft.PowerShell.Utility'
 Import-Module -Name 'Microsoft.PowerShell.Management'
 Import-Module -Name 'Microsoft.PowerShell.Security'
+
+# When running a scheduled task as a gMSA the environment is not initialized properly.
+# For example LOCALAPPDATA points to C:\Users\Public and when Connect-AzureAD tries to
+# write it's logs to AppData it will fail. To work around the problem we set LOCALAPPDATA here.
+[Environment]::SetEnvironmentVariable('LOCALAPPDATA', $Script:Config.Environment.LocalAppData, 'User')
+
+Import-Module -Name 'ActiveDirectory'
 
 . "$PSScriptRoot\Config.ps1"
 . "$PSScriptRoot\TaskDefinition.ps1"
@@ -224,21 +231,6 @@ function Start-Task
         $result
         return
     }
-}
-
-try
-{
-    Import-Module -Name 'ActiveDirectory'
-}
-catch
-{
-    Write-ErrorLogEntry -TaskName 'Initialization' -TaskId -1 -Object ([pscustomobject]@{
-        Target    = 'ActiveDirectory'
-        Activity  = 'Import-Module'
-        Reason    = 'Uanble to load module'
-        Message   = $_.Exception.Message
-    })
-    exit
 }
 
 # ExtensionAttribute9 contains the task objects serialized as json

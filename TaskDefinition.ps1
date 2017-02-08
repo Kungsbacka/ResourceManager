@@ -79,8 +79,20 @@ $Script:TaskDefinitions = @{
     }
     MsolLicense = @{
         Command = 'Set-KBAMsolUserLicense'
-        Initializer = 'Connect-KBAMsolService'
+        Initializer = 'Connect-KBAAzureAD'
         Parameters = @('License')
+        OptionalParameters = @()
+    }
+    MsolRemoveLicense = @{
+        Command = 'Remove-KBAMsolUserLicense'
+        Initializer = 'Connect-KBAAzureAD'
+        Parameters = @()
+        OptionalParameters = @()
+    }
+    MsolRestoreLicense = @{
+        Command = 'Restore-KBAMsolUserLicense'
+        Initializer = 'Connect-KBAAzureAD'
+        Parameters = @()
         OptionalParameters = @()
     }
     EnableCSUser = @{

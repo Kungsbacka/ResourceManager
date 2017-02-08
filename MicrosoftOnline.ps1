@@ -2,26 +2,26 @@
 $Global:ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\Config.ps1"
 
-function Connect-KBAMsolService
+function Connect-KBAAzureAD
 {
-    Import-Module -Name 'MSOnline' -DisableNameChecking
+    Import-Module -Name 'AzureAD' -DisableNameChecking
     $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
         $Script:Config.Office365.User
         $Script:Config.Office365.Password | ConvertTo-SecureString
     )
     try
     {
-        Connect-MsolService -Credential $credential
+        Connect-AzureAD -Credential $credential | Out-Null
     }
     catch
     {
         throw [pscustomobject]@{
             Time       = [DateTime]::Now
-            Target     = 'MSOnline'
+            Target     = 'AzureAD'
             Activity   = $MyInvocation.MyCommand.Name
-            Reason     = 'Connect-MsolService failed'
+            Reason     = 'Connect-AzureAD failed'
             Message    = $_.Exception.Message
-            RetryCount = 100
+            RetryCount = 20
             Delay      = 5
         }
     }
@@ -40,7 +40,7 @@ function Enable-KBAMsolSync
     {
         $params = @{
             Identity = $Identity
-            Properties = 'ExtensionAttribute11'
+            Properties = @('ExtensionAttribute11')
         }
         try
         {
@@ -54,7 +54,7 @@ function Enable-KBAMsolSync
                 Reason     = 'Get-ADUser failed'
                 Message    = $_.Exception.Message
                 RetryCount = 3
-                Delay      = 0
+                Delay      = 5
             }
         }
         if ($user.ExtensionAttribute11 -eq $null)
@@ -63,6 +63,9 @@ function Enable-KBAMsolSync
                 Identity = $Identity
                 Add = @{
                     ExtensionAttribute11 = 'SYNC_ME'
+                }
+                Replace = @{
+                    MsExchUsageLocation = 'SE' # Synced to Usage Location in Azure AD
                 }
             }
             try
@@ -77,7 +80,7 @@ function Enable-KBAMsolSync
                     Reason     = 'Set-ADUser failed'
                     Message    = $_.Exception.Message
                     RetryCount = 3
-                    Delay      = 0
+                    Delay      = 5
                 }
             }
         }
@@ -92,99 +95,251 @@ function Set-KBAMsolUserLicense
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
         [string]$UserPrincipalName,
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [string]$License
+        [object]$License
     )
     process
     {
         try
         {
-            $msolUser = Get-MsolUser -UserPrincipalName $UserPrincipalName
+            $msolUser = Get-AzureADUser -ObjectId $UserPrincipalName
         }
         catch
         {
             throw [pscustomobject]@{
                 Target     = $UserPrincipalName
                 Activity   = $MyInvocation.MyCommand.Name
-                Reason     = 'Get-MsolUser failed'
+                Reason     = 'Get-AzureADUser failed'
                 Message    = $_.Exception.Message
-                RetryCount = 10
+                RetryCount = 3
                 Delay      = 20
             }
         }
-        $currentLicense = ''
-        foreach ($lic in $msolUser.Licenses)
+        $removeLicenses = New-Object 'System.Collections.Generic.List[string]'
+        foreach ($item in $msolUser.AssignedLicenses)
         {
-            $currentLicense += $lic.AccountSkuId -replace "$($Script:Config.MicrosoftOnline.AccountName):", ''
-            $disabledPlans = '('
-            foreach($status in $lic.ServiceStatus)
-            {
-                if ($status.ProvisioningStatus -eq 'Disabled')
-                {
-                    $disabledPlans = $disabledPlans + $status.ServicePlan.ServiceName + ','
-                }
-            }
-            $disabledPlans = $disabledPlans.TrimEnd(',') + ')'
-            if ($disabledPlans.Length -gt 2)
-            {
-                $currentLicense += $disabledPlans
-            }
-            $currentLicense += '+'
+            $removeLicenses.Add($item.SkuId)
         }
-        if ($License -eq $currentLicense.TrimEnd('+'))
-        {
-            Write-Verbose -Message "User account ($UserPrincipalName) already has this license"
-            return
-        }
-        # Set-MsolUserLicense fails if usage location is not set
-        if ($msolUser.UsageLocation -eq $null)
+        $addLicenses = New-Object 'System.Collections.Generic.List[Microsoft.Open.AzureAD.Model.AssignedLicense]'
+        foreach ($item in $License)
         {
             try
             {
-                Set-MsolUser -UserPrincipalName $UserPrincipalName -UsageLocation 'SE'
+                $addLicenses.Add((New-Object -TypeName 'Microsoft.Open.AzureAD.Model.AssignedLicense' -ArgumentList @($item.DisabledPlans, $item.SkuId)))
             }
             catch
             {
                 throw [pscustomobject]@{
                     Target     = $UserPrincipalName
                     Activity   = $MyInvocation.MyCommand.Name
-                    Reason     = 'Set-MsolUser failed'
+                    Reason     = 'New [Microsoft.Open.AzureAD.Model.AssignedLicense]'
                     Message    = $_.Exception.Message
-                    RetryCOunt = 3
-                    Delay      = 5
+                    RetryCount = 0
+                    Delay      = 0
                 }
             }
-        }   
-        $licensesToRemove = $msolUser.Licenses.AccountSkuId
-        $licensesToAdd = @()
-        $licenseOptions = @()
-        $skus = $License -split '\+'
-        foreach ($sku in $skus)
-        {
-            if ($sku -match '\(([^)]+)\)')
-            {
-                $disabledPlans = $Matches[1] -split ','
-                $sku = $sku -replace '\([^)]+\)', ''
-                $licenseOptions += New-MsolLicenseOptions -AccountSkuId "$($Script:Config.MicrosoftOnline.AccountName):$sku" -DisabledPlans $disabledPlans
-            }
-            $licensesToAdd += "$($Script:Config.MicrosoftOnline.AccountName):$sku"
         }
         try
         {
-            # This is the only way I was able to replace all licenses.
-            # Only one call to Set-MsolUserLicense with all parameters did not work reliably.
-            Set-MsolUserLicense -UserPrincipalName $UserPrincipalName -RemoveLicenses $licensesToRemove
-            Set-MsolUserLicense -UserPrincipalName $UserPrincipalName -AddLicenses $licensesToAdd
-            Set-MsolUserLicense -UserPrincipalName $UserPrincipalName -LicenseOptions $licenseOptions
+            $assignedLicenses = New-Object -TypeName 'Microsoft.Open.AzureAD.Model.AssignedLicenses' -ArgumentList @($addLicenses, $removeLicenses)
+        }
+        catch
+        {
+                throw [pscustomobject]@{
+                    Target     = $UserPrincipalName
+                    Activity   = $MyInvocation.MyCommand.Name
+                    Reason     = 'New [Microsoft.Open.AzureAD.Model.AssignedLicenses]'
+                    Message    = $_.Exception.Message
+                    RetryCount = 0
+                    Delay      = 0
+                }
+        }
+        try
+        {
+            Set-AzureADUserLicense -ObjectId $UserPrincipalName -AssignedLicenses $assignedLicenses
         }
         catch
         {
             throw [pscustomobject]@{
                 Target     = $UserPrincipalName
                 Activity   = $MyInvocation.MyCommand.Name
-                Reason     = 'Set-MsolUserLicense failed'
+                Reason     = 'Set-AzureADUserLicense failed'
                 Message    = $_.Exception.Message
                 RetryCount = 3
                 Delay      = 5
+            }
+        }
+    }
+}
+
+function Remove-KBAMsolUserLicense
+{
+    [CmdLetBinding()]
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]$UserPrincipalName,
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]$SamAccountName
+    )
+    process
+    {
+        try
+        {
+            $msolUser = Get-AzureADUser -ObjectId $UserPrincipalName
+        }
+        catch
+        {
+            throw [pscustomobject]@{
+                Target     = $UserPrincipalName
+                Activity   = $MyInvocation.MyCommand.Name
+                Reason     = 'Get-AzureADUser failed'
+                Message    = $_.Exception.Message
+                RetryCount = 3
+                Delay      = 20
+            }
+        }
+        $licenseJson = ConvertTo-Json -InputObject @($msolUser.AssignedLicenses) -Compress
+        $licenseJson = $licenseJson.ToString()
+        if ($licenseJson -eq '[]')
+        {
+            # User has no license
+            return
+        }
+        try
+        {
+            Set-ADUser -Identity $SamAccountName -Replace @{ExtensionAttribute1=$licenseJson}
+        }
+        catch
+        {
+            throw [pscustomobject]@{
+                Target     = $UserPrincipalName
+                Activity   = $MyInvocation.MyCommand.Name
+                Reason     = 'Set-ADUser failed'
+                Message    = $_.Exception.Message
+                RetryCount = 3
+                Delay      = 20
+            }
+        }
+        $removeLicenses = New-Object 'System.Collections.Generic.List[string]'
+        foreach ($item in $msolUser.AssignedLicenses)
+        {
+            $removeLicenses.Add($item.SkuId)
+        }
+        try
+        {
+            $assignedLicenses = New-Object -TypeName 'Microsoft.Open.AzureAD.Model.AssignedLicenses' -ArgumentList @($null, $removeLicenses)
+        }
+        catch
+        {
+                throw [pscustomobject]@{
+                    Target     = $UserPrincipalName
+                    Activity   = $MyInvocation.MyCommand.Name
+                    Reason     = 'New [Microsoft.Open.AzureAD.Model.AssignedLicenses]'
+                    Message    = $_.Exception.Message
+                    RetryCount = 0
+                    Delay      = 0
+                }
+        }
+        try
+        {
+            Set-AzureADUserLicense -ObjectId $UserPrincipalName -AssignedLicenses $assignedLicenses
+        }
+        catch
+        {
+            throw [pscustomobject]@{
+                Target     = $UserPrincipalName
+                Activity   = $MyInvocation.MyCommand.Name
+                Reason     = 'Set-AzureADUserLicense failed'
+                Message    = $_.Exception.Message
+                RetryCount = 3
+                Delay      = 5
+            }
+        }
+    }
+}
+
+function Restore-KBAMsolUserLicense
+{
+    [CmdLetBinding()]
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]$UserPrincipalName,
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]$SamAccountName
+    )
+    process
+    {
+        try
+        {
+            $adUser = Get-ADUser -Identity $SamAccountName -Properties @('ExtensionAttribute1')
+        }
+        catch
+        {
+            throw [pscustomobject]@{
+                Target     = $SamAccountName
+                Activity   = $MyInvocation.MyCommand.Name
+                Reason     = 'Get-ADUSer failed'
+                Message    = $_.Exception.Message
+                RetryCount = 3
+                Delay      = 20
+            }
+        }
+        if ($adUser.ExtensionAttribute1 -eq $null)
+        {
+            throw [pscustomobject]@{
+                Target     = $SamAccountName
+                Activity   = $MyInvocation.MyCommand.Name
+                Reason     = 'ExtensionAttribute1 is empty'
+                Message    = 'A stashed license does not exists in ExtensionAttribute1'
+                RetryCount = 0
+                Delay      = 0
+            }
+        }
+        
+        try
+        {
+            $license = $adUser.ExtensionAttribute1 | ConvertFrom-Json
+        }
+        catch
+        {
+            throw [pscustomobject]@{
+                Target     = $UserPrincipalName
+                Activity   = $MyInvocation.MyCommand.Name
+                Reason     = 'ConvertFrom-Json failed'
+                Message    = $_.Exception.Message
+                RetryCount = 0
+                Delay      = 0
+            }
+        }
+        try
+        {
+            Set-KBAMsolUserLicense -UserPrincipalName $UserPrincipalName -License $license
+        }
+        catch
+        {
+            throw [pscustomobject]@{
+                Target     = $UserPrincipalName
+                Activity   = $MyInvocation.MyCommand.Name
+                Reason     = 'Set-KBAMsolUserLicense failed'
+                Message    = $_.Exception.Message
+                RetryCount = 3
+                Delay      = 20
+            }
+        }
+        try
+        {
+            Set-ADUser -Identity $SamAccountName -Clear 'ExtensionAttribute1'
+        }
+        catch
+        {
+            throw [pscustomobject]@{
+                Target     = $UserPrincipalName
+                Activity   = $MyInvocation.MyCommand.Name
+                Reason     = 'Set-ADUser failed'
+                Message    = $_.Exception.Message
+                RetryCount = 3
+                Delay      = 20
             }
         }
     }
