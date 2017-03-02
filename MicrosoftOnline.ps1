@@ -9,16 +9,7 @@ function Connect-KBAAzureAD
         $Script:Config.Office365.User
         $Script:Config.Office365.Password | ConvertTo-SecureString
     )
-    try
-    {
-        Connect-AzureAD -Credential $credential -LogLevel None | Out-Null
-    }
-    catch
-    {
-        $_.Exception.Data.Add('RetryCount', 20)
-        $_.Exception.Data.Add('Delay', 5)
-        throw
-    }
+    Connect-AzureAD -Credential $credential -LogLevel None | Out-Null
 }
 
 function Enable-KBAMsolSync
@@ -27,23 +18,14 @@ function Enable-KBAMsolSync
     (
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
         [Alias('SamAccountName','ObjectGUID','DistinguishedName')]
-        [string]$Identity
+        [string]
+        $Identity
     )
     $params = @{
         Identity = $Identity
         Properties = @('ExtensionAttribute11')
     }
-    try
-    {
-        $user = Get-ADUser @params
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        $_.Exception.Data.Add('RetryCount', 1)
-        $_.Exception.Data.Add('Delay', 3)
-        throw
-    }
+    $user = Get-ADUser @params
     if ($user.ExtensionAttribute11 -eq $null)
     {
         $params = @{
@@ -52,20 +34,11 @@ function Enable-KBAMsolSync
                 ExtensionAttribute11 = 'SYNC_ME'
             }
             Replace = @{
-                MsExchUsageLocation = $Script:Config.MicrosoftOnline.UsageLocation # Synced to Usage Location in Azure AD
+                # MsExchUsageLocation is synced to UsageLocation in Azure AD
+                MsExchUsageLocation = $Script:Config.MicrosoftOnline.UsageLocation
             }
         }
-        try
-        {
-            Set-ADUser @params
-        }
-        catch
-        {
-            $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-            $_.Exception.Data.Add('RetryCount', 1)
-            $_.Exception.Data.Add('Delay', 3)
-            throw
-        }
+        Set-ADUser @params
     }
 }
 
@@ -74,35 +47,17 @@ function Set-KBAMsolUserLicense
     param
     (
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [string]$UserPrincipalName,
+        [string]
+        $UserPrincipalName,
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [object]$License
+        [object]
+        $License
     )
-    try
-    {
-        $aadUser = Get-AzureADUser -ObjectId $UserPrincipalName
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        $_.Exception.Data.Add('RetryCount', 3)
-        $_.Exception.Data.Add('Delay', 10)
-        throw
-    }
+    $aadUser = Get-AzureADUser -ObjectId $UserPrincipalName
     if (aadUser.UsageLocation -ne 'SE')
     {
-        try
-        {
-            # If MsExchUsageLocation hasn't synced yet we set UsageLocation explicitly
-            Set-AzureADUser -ObjectId $UserPrincipalName -UsageLocation $Script:Config.MicrosoftOnline.UsageLocation
-        }
-        catch
-        {
-            $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-            $_.Exception.Data.Add('RetryCount', 3)
-            $_.Exception.Data.Add('Delay', 10)
-            throw            
-        }
+        # If MsExchUsageLocation hasn't synced yet, we set UsageLocation explicitly
+        Set-AzureADUser -ObjectId $UserPrincipalName -UsageLocation $Script:Config.MicrosoftOnline.UsageLocation
     }
     $removeLicenses = New-Object 'System.Collections.Generic.List[string]'
     foreach ($item in $aadUser.AssignedLicenses)
@@ -112,36 +67,10 @@ function Set-KBAMsolUserLicense
     $addLicenses = New-Object 'System.Collections.Generic.List[Microsoft.Open.AzureAD.Model.AssignedLicense]'
     foreach ($item in $License)
     {
-        try
-        {
-            $addLicenses.Add((New-Object -TypeName 'Microsoft.Open.AzureAD.Model.AssignedLicense' -ArgumentList @($item.DisabledPlans, $item.SkuId)))
-        }
-        catch
-        {
-            $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-            throw
-        }
+        $addLicenses.Add((New-Object -TypeName 'Microsoft.Open.AzureAD.Model.AssignedLicense' -ArgumentList @($item.DisabledPlans, $item.SkuId)))
     }
-    try
-    {
-        $assignedLicenses = New-Object -TypeName 'Microsoft.Open.AzureAD.Model.AssignedLicenses' -ArgumentList @($addLicenses, $removeLicenses)
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        throw
-    }
-    try
-    {
-        Set-AzureADUserLicense -ObjectId $UserPrincipalName -AssignedLicenses $assignedLicenses
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        $_.Exception.Data.Add('RetryCount', 3)
-        $_.Exception.Data.Add('Delay', 5)
-        throw
-    }
+    $assignedLicenses = New-Object -TypeName 'Microsoft.Open.AzureAD.Model.AssignedLicenses' -ArgumentList @($addLicenses, $removeLicenses)
+    Set-AzureADUserLicense -ObjectId $UserPrincipalName -AssignedLicenses $assignedLicenses
 }
 
 function Remove-KBAMsolUserLicense
@@ -149,64 +78,27 @@ function Remove-KBAMsolUserLicense
     param
     (
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [string]$UserPrincipalName,
+        [string]
+        $UserPrincipalName,
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [string]$SamAccountName
+        [string]
+        $SamAccountName
     )
-    try
-    {
-        $msolUser = Get-AzureADUser -ObjectId $UserPrincipalName
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        $_.Exception.Data.Add('RetryCount', 3)
-        $_.Exception.Data.Add('Delay', 10)
-        throw
-    }
+    $msolUser = Get-AzureADUser -ObjectId $UserPrincipalName
     $licenseJson = ConvertTo-Json -InputObject @($msolUser.AssignedLicenses) -Compress
     $licenseJson = $licenseJson.ToString()
     if ($licenseJson -eq '[]')
     {
-        # User has no license
-        return
+        return # User has no license
     }
-    try
-    {
-        Set-ADUser -Identity $SamAccountName -Replace @{ExtensionAttribute1=$licenseJson}
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        $_.Exception.Data.Add('RetryCount', 1)
-        $_.Exception.Data.Add('Delay', 3)
-        throw
-    }
+    Set-ADUser -Identity $SamAccountName -Replace @{ExtensionAttribute1=$licenseJson}
     $removeLicenses = New-Object 'System.Collections.Generic.List[string]'
     foreach ($item in $msolUser.AssignedLicenses)
     {
         $removeLicenses.Add($item.SkuId)
     }
-    try
-    {
-        $assignedLicenses = New-Object -TypeName 'Microsoft.Open.AzureAD.Model.AssignedLicenses' -ArgumentList @($null, $removeLicenses)
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        throw
-    }
-    try
-    {
-        Set-AzureADUserLicense -ObjectId $UserPrincipalName -AssignedLicenses $assignedLicenses
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        $_.Exception.Data.Add('RetryCount', 3)
-        $_.Exception.Data.Add('Delay', 10)
-        throw
-    }
+    $assignedLicenses = New-Object -TypeName 'Microsoft.Open.AzureAD.Model.AssignedLicenses' -ArgumentList @($null, $removeLicenses)
+    Set-AzureADUserLicense -ObjectId $UserPrincipalName -AssignedLicenses $assignedLicenses
 }
 
 function Restore-KBAMsolUserLicense
@@ -214,58 +106,20 @@ function Restore-KBAMsolUserLicense
     param
     (
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [string]$UserPrincipalName,
+        [string]
+        $UserPrincipalName,
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [string]$SamAccountName
+        [string]
+        $SamAccountName
     )
-    try
-    {
-        $adUser = Get-ADUser -Identity $SamAccountName -Properties @('ExtensionAttribute1')
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        $_.Exception.Data.Add('RetryCount', 3)
-        $_.Exception.Data.Add('Delay', 10)
-        throw
-    }
+    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('ExtensionAttribute1')
     if ($adUser.ExtensionAttribute1 -eq $null)
     {
-        $e = New-Object -TypeName 'System.Exception' -ArgumentList @('No stashed license exists for user')
-        $e.Data.Add('Parameters', $PSBoundParameters)
-        throw $e
+        throw 'No stashed license exists in extensionAttribute1'
     }
-    try
-    {
-        $license = $adUser.ExtensionAttribute1 | ConvertFrom-Json
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        throw
-    }
-    try
-    {
-        Set-KBAMsolUserLicense -UserPrincipalName $UserPrincipalName -License $license
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        $_.Exception.Data.Add('RetryCount', 3)
-        $_.Exception.Data.Add('Delay', 10)
-        throw
-    }
-    try
-    {
-        Set-ADUser -Identity $SamAccountName -Clear 'ExtensionAttribute1'
-    }
-    catch
-    {
-        $_.Exception.Data.Add('Parameters', $PSBoundParameters)
-        $_.Exception.Data.Add('RetryCount', 1)
-        $_.Exception.Data.Add('Delay', 3)
-        throw
-    }
+    $license = $adUser.ExtensionAttribute1 | ConvertFrom-Json
+    Set-KBAMsolUserLicense -UserPrincipalName $UserPrincipalName -License $license
+    Set-ADUser -Identity $SamAccountName -Clear 'ExtensionAttribute1'
 }
 
 function Get-KBAMsolPredefinedLicensePackage
@@ -276,7 +130,8 @@ function Get-KBAMsolPredefinedLicensePackage
         # $t = 'Kungsbacka.AccountTasks.MsolPredefinedLicensePackage' -as [type]
         # $t.GetMembers() | ? {$_.FieldType -eq ('Kungsbacka.AccountTasks.MsolLicense[]' -as [type])} | % Name
         [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-        [string[]]$Package
+        [string[]]
+        $Package
     )
     begin
     {

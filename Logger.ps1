@@ -6,7 +6,6 @@ Enum TaskResult
 {
     Success
     Failure
-    Retry
     Wait
 }
 
@@ -14,13 +13,12 @@ function Update-TaskLogEntry
 {
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [int]
         $TaskId,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [TaskResult]
         $Result,
-        [Parameter(Mandatory = $false)]
         [switch]
         $EndTask
     )
@@ -46,47 +44,32 @@ function New-TaskLogEntry
 {
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [string]
         $Task,
-        [Parameter(Mandatory = $true)]
         [string]
-        $Target
+        $Target,
+        [TaskResult]
+        $Result
     )
     process
     {
-        Invoke-StoredProcedure -Procedure 'dbo.spInsertNewTaskLogEntry' -Scalar -Parameters @{
+        $id = Invoke-StoredProcedure -Procedure 'dbo.spInsertNewTaskLogEntry' -Scalar -Parameters @{
             Task = $Task
             Target = $Target
         }
-    }
-}
-
-function Write-ErrorLogEntry
-{
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [int]
-        $TaskId,
-        [Parameter(Mandatory = $true)]
-        [string]
-        $TaskName,
-        [Parameter(Mandatory = $true)]
-        [System.Object]
-        $Object
-    )
-    process
-    {
-        Invoke-StoredProcedure -Procedure 'dbo.spInsertNewTaskErrorLogEntry' -Parameters @{
-            TaskId = $TaskId
-            Task = $TaskName
-            Target = $Object.Target
-            Activity = $Object.Activity
-            Reason = $Object.Reason
-            Message = $Object.Message
+        if ($Result)
+        {
+            Invoke-StoredProcedure -Procedure 'dbo.spUpdateTaskLogEntry' -Parameters @{
+                TaskId = $id
+                Status = $Result.ToString()
+                End = 1
+            }
         }
-  
+        else
+        {
+            $id
+        }
     }
 }
 
@@ -100,7 +83,7 @@ function Write-ErrorLog
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true,ParameterSetName='CustomError')]
         [string]
         $Message,
-        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true,ParameterSetName='CustomError')]
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
         [string]
         $Target,
         [Parameter(ValueFromPipelineByPropertyName=$true)]
@@ -109,39 +92,47 @@ function Write-ErrorLog
     )
     if ($Message)
     {
-@"
----------------------------------------------------
----- {0}
----------------------------------------------------
-##Target: {1}
-
-##Exception:
-{2}
-"@ -f (Get-Date),
-
-    }
-
-
-    if ($ErrorRecord.Exception.Data.Contains('Parameters'))
-    {
-        $params = $ErrorRecord.Exception.Data.Parameters
-        $paramsObject = $params | ConvertFrom-Json
-        if ($paramsObject.UserPrincipalName)
-        {
-            $target = $paramsObject.UserPrincipalName
-        }
-        elseif ($paramsObject.Identity)
-        {
-            $target = $paramsObject.Identity
-        }
-        else
-        {
-            $target = 'Unknown'
+        $params = @{
+            Target = $Target
+            Message = $Message
+            TaskJson = $TaskJson
         }
     }
     else
     {
-        $params = 'No parameters'
+        $params = @{
+            Target = $Target
+            Message = $ErrorRecord.Exception.ToString()
+            ScriptStackTrace = $ErrorRecord.ScriptStackTrace
+            TaskJson = $TaskJson
+        }
+    }
+    $text = Get-ErrorText @params
+    $currentLog = Get-ChildItem -Path $Script:Config.Logger.LogPath -Filter '*.log' |
+        Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1
+    if ($currentLog.LastWriteTime -lt ((Get-Date).AddMonths(-1)))
+    {
+        $fileName = 'rmgr_' + (Get-Date).ToString('yyyyMMdd_HHmmss') + '.log'
+        $newLogFile = Join-Path -Path $Script:Config.Logger.LogPath -ChildPath $fileName
+        $currentLog = New-Item -Path $newLogFile -ItemType File
+    }
+    $text | Out-File -FilePath $currentLog.FullName -Encoding UTF8 -Append
+}
+
+function Get-ErrorText
+{
+    param
+    (
+        [string]$Target,
+        [string]$Message,
+        [string]$ScriptStackTrace,
+        [string]$TaskJson
+    )
+    if ($TaskJson)
+    {
+        # Make sure JSON is properly formatted
+        $obj = $TaskJson | ConvertFrom-Json
+        $TaskJson = $obj | ConvertTo-NewtonsoftJson -Formatting Indented
     }
 @"
 ---------------------------------------------------
@@ -155,14 +146,10 @@ function Write-ErrorLog
 ##Script stacktrace:
 {3}
 
-##Parameters:
+##Task JSON:
 {4}
 
-"@ -f  (Get-Date),
-        $target,
-        $_.Exception.ToString(),
-        $_.ScriptStackTrace,
-        $params | Out-File -FilePath $Script:Config.Logger.LogPath -Encoding UTF8 -Append
+"@ -f (Get-Date), $Target, $Message, $ScriptStackTrace, $TaskJson
 }
 
 function Invoke-StoredProcedure
@@ -215,24 +202,4 @@ function ConvertTo-NewtonsoftJson
         $Formatting = [Newtonsoft.Json.Formatting]::Indented
     )
     [Newtonsoft.Json.JsonConvert]::SerializeObject($InputObject, $Formatting) | Write-Output
-}
-
-function New-Exception
-{
-    param
-    (
-        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [ValidateNotNullOrEmpty()]
-        [string]$Message,
-        [Parameter(ValueFromPipelineByPropertyName=$true)]
-        [object]$Parameters
-    )
-
-    $exception = New-Object -TypeName 'System.Exception' -ArgumentList @($Message)
-    if ($Parameters)
-    {
-        $serializedParams = $Parameters | ConvertTo-NewtonsoftJson -Formatting Indented
-        $exception.Data.Add('Parameters', $serializedParams)
-    }
-    Write-Output -InputObject $exception
 }
