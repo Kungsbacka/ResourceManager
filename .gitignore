@@ -1,3 +1,4 @@
 *.cmd
+*.dll
 .vscode
 Config.ps1
