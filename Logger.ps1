@@ -90,6 +90,81 @@ function Write-ErrorLogEntry
     }
 }
 
+function Write-ErrorLog
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true,ParameterSetName='ErrorRecord')]
+        [object]
+        $ErrorRecord,
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true,ParameterSetName='CustomError')]
+        [string]
+        $Message,
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true,ParameterSetName='CustomError')]
+        [string]
+        $Target,
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $TaskJson
+    )
+    if ($Message)
+    {
+@"
+---------------------------------------------------
+---- {0}
+---------------------------------------------------
+##Target: {1}
+
+##Exception:
+{2}
+"@ -f (Get-Date),
+
+    }
+
+
+    if ($ErrorRecord.Exception.Data.Contains('Parameters'))
+    {
+        $params = $ErrorRecord.Exception.Data.Parameters
+        $paramsObject = $params | ConvertFrom-Json
+        if ($paramsObject.UserPrincipalName)
+        {
+            $target = $paramsObject.UserPrincipalName
+        }
+        elseif ($paramsObject.Identity)
+        {
+            $target = $paramsObject.Identity
+        }
+        else
+        {
+            $target = 'Unknown'
+        }
+    }
+    else
+    {
+        $params = 'No parameters'
+    }
+@"
+---------------------------------------------------
+---- {0}
+---------------------------------------------------
+##Target: {1}
+
+##Exception:
+{2}
+
+##Script stacktrace:
+{3}
+
+##Parameters:
+{4}
+
+"@ -f  (Get-Date),
+        $target,
+        $_.Exception.ToString(),
+        $_.ScriptStackTrace,
+        $params | Out-File -FilePath $Script:Config.Logger.LogPath -Encoding UTF8 -Append
+}
+
 function Invoke-StoredProcedure
 {
     param
@@ -126,4 +201,38 @@ function Invoke-StoredProcedure
             [void]$cmd.ExecuteNonQuery()
         }
     }
+}
+
+function ConvertTo-NewtonsoftJson
+{
+    param
+    (
+        [Parameter(Mandatory=$true, ValueFromPipeline=$true, Position=0)]
+        [object]
+        $InputObject,
+        [Parameter(ValueFromPipelineByPropertyName=$true, Position=1)]
+        [Newtonsoft.Json.Formatting]
+        $Formatting = [Newtonsoft.Json.Formatting]::Indented
+    )
+    [Newtonsoft.Json.JsonConvert]::SerializeObject($InputObject, $Formatting) | Write-Output
+}
+
+function New-Exception
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Message,
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        [object]$Parameters
+    )
+
+    $exception = New-Object -TypeName 'System.Exception' -ArgumentList @($Message)
+    if ($Parameters)
+    {
+        $serializedParams = $Parameters | ConvertTo-NewtonsoftJson -Formatting Indented
+        $exception.Data.Add('Parameters', $serializedParams)
+    }
+    Write-Output -InputObject $exception
 }

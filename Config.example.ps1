@@ -2,9 +2,7 @@
 $Config = @{
     Logger = @{
         ConnectionString = 'Server=<Server>;Database=<Database>;Integrated Security=True'
-    }
-    Environment = @{
-        LocalAppData = '<path to writable dir>'
+        LogPath = 'C:\Temp'
     }
     HomeFolder = @{
         Domain = '<AD domain>'
@@ -15,6 +13,7 @@ $Config = @{
     }
     MicrosoftOnline = @{
         AccountName = '<License account name>'
+        UsageLocation = 'SE'
     }
     SkypeOnprem = @{
         RegistrarPool = '<Skype pool FQDN>'

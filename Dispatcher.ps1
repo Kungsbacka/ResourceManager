@@ -5,12 +5,6 @@ $ErrorActionPreference = 'Stop'
 Import-Module -Name 'Microsoft.PowerShell.Utility'
 Import-Module -Name 'Microsoft.PowerShell.Management'
 Import-Module -Name 'Microsoft.PowerShell.Security'
-
-# When running a scheduled task as a gMSA the environment is not initialized properly.
-# For example LOCALAPPDATA points to C:\Users\Public and when Connect-AzureAD tries to
-# write it's logs to AppData it will fail. To work around the problem we set LOCALAPPDATA here.
-[Environment]::SetEnvironmentVariable('LOCALAPPDATA', $Script:Config.Environment.LocalAppData, 'User')
-
 Import-Module -Name 'ActiveDirectory'
 
 . "$PSScriptRoot\Config.ps1"
