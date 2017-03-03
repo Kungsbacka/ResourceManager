@@ -122,23 +122,3 @@ function Restore-KBAMsolUserLicense
     Set-KBAMsolUserLicense -UserPrincipalName $UserPrincipalName -License $license
     Set-ADUser -Identity $SamAccountName -Clear 'ExtensionAttribute1'
 }
-
-function Get-KBAMsolPredefinedLicensePackage
-{
-    param
-    (
-        # TODO: turn into DymanicParam and use reflection to populate a ValidateSet:
-        # $t = 'Kungsbacka.AccountTasks.MsolPredefinedLicensePackage' -as [type]
-        # $t.GetMembers() | ? {$_.FieldType -eq ('Kungsbacka.AccountTasks.MsolLicense[]' -as [type])} | % Name
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-        [string[]]
-        $Package
-    )
-    process
-    {
-        foreach ($item in $Package)
-        {
-            [Kungsbacka.AccountTasks.MsolPredefinedLicensePackage]::GetPackageFromName($Package)
-        }
-    }
-}
