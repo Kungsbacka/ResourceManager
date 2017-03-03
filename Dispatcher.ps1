@@ -150,7 +150,7 @@ function Start-Task
 
 # ExtensionAttribute9 contains the task objects serialized as json
 $params = @{
-    Filter = {ExtensionAttribute9 -like '*' -and Enabled -eq $true}
+    Filter = "ExtensionAttribute9 -like '*' -and Enabled -eq 'True' -and SamAccountName -eq 'jonmai'"
     Properties = @(
         'Department'
         'DisplayName'
@@ -179,7 +179,7 @@ try
 }
 catch
 {
-    New-TaskLogEntry -Task 'QueryActiveDirectory' -Result [TaskResult]:Failure
+    New-TaskLogEntry -Task 'QueryActiveDirectory' -Result ([TaskResult]::Failure)
     Write-ErrorLog -ErrorRecord $_
     exit
 }
@@ -191,7 +191,7 @@ foreach ($user in $users)
     }
     catch
     {
-        New-TaskLogEntry -Task 'DeserializeTaskJson' -Result [TaskResult]:Failure
+        New-TaskLogEntry -Task 'DeserializeTaskJson' -Result ([TaskResult]::Failure)
         Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
         continue
     }
@@ -221,8 +221,8 @@ foreach ($user in $users)
                 }
                 catch
                 {
-                    Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
-                    Update-TaskLogEntry -TaskId $currentTask.Id -Result [TaskResult]::Failure -EndTask
+                    Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
+                    Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask
                     break
                 }
                 if ($result -eq [TaskResult]::Success)
@@ -255,14 +255,14 @@ foreach ($user in $users)
             }
             catch
             {
-                Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
-                Update-TaskLogEntry -TaskId $currentTask.Id -Result [TaskResult]::Failure -EndTask
+                Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
+                Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask
+                continue
             }
             if ($result -eq [TaskResult]::Wait)
             {
                 $remainingTasks += $deserializedTasks[$i..($deserializedTasks.Count - 1)]
                 Update-TaskLogEntry -TaskId $currentTask.Id -Result $result
-                break
             }
             else # [TaskResult]::Success
             {
@@ -274,7 +274,7 @@ foreach ($user in $users)
     # while the tasks were executed, we assume someone didn't want to execute the remaining tasks.
     try
     {
-        $user2 = Get-ADUser -Filter {ObjectGuid -eq $user.Identity} -Properties 'ExtensionAttribute9'
+        $user2 = Get-ADUser -Filter "ObjectGuid -eq '$($user.Identity)'" -Properties 'ExtensionAttribute9'
         if ($user2 -eq $null)
         {
             exit
@@ -294,7 +294,7 @@ foreach ($user in $users)
     }
     catch
     {
-        New-TaskLogEntry -Task 'SaveRemaningTasks' -Result [TaskResult]:Failure
+        New-TaskLogEntry -Task 'SaveRemaningTasks' -Result ([TaskResult]::Failure)
         Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName
     }
 }

@@ -2,13 +2,6 @@
 $Global:ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\Config.ps1"
 
-Enum TaskResult
-{
-    Success
-    Failure
-    Wait
-}
-
 function Update-TaskLogEntry
 {
     param
@@ -84,6 +77,9 @@ function Write-ErrorLog
         [string]
         $Message,
         [Parameter(ValueFromPipelineByPropertyName=$true)]
+        [int]
+        $TaskId,
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
         [string]
         $Target,
         [Parameter(ValueFromPipelineByPropertyName=$true)]
@@ -95,6 +91,7 @@ function Write-ErrorLog
         $params = @{
             Target = $Target
             Message = $Message
+            TaskId = $TaskId
             TaskJson = $TaskJson
         }
     }
@@ -103,6 +100,7 @@ function Write-ErrorLog
         $params = @{
             Target = $Target
             Message = $ErrorRecord.Exception.ToString()
+            TaskId = $TaskId
             ScriptStackTrace = $ErrorRecord.ScriptStackTrace
             TaskJson = $TaskJson
         }
@@ -123,6 +121,7 @@ function Get-ErrorText
 {
     param
     (
+        [string]$TaskId,
         [string]$Target,
         [string]$Message,
         [string]$ScriptStackTrace,
@@ -132,24 +131,32 @@ function Get-ErrorText
     {
         # Make sure JSON is properly formatted
         $obj = $TaskJson | ConvertFrom-Json
-        $TaskJson = $obj | ConvertTo-NewtonsoftJson -Formatting Indented
+        $TaskJson = $obj | ConvertTo-Json -Depth 4
+    }
+    if ($TaskId)
+    {
+        $idString = 'ID #' + $TaskId
+    }
+    else
+    {
+        $idString = ''
     }
 @"
 ---------------------------------------------------
----- {0}
+---- {0}  {1}
 ---------------------------------------------------
-##Target: {1}
+##Target: {2}
 
 ##Exception:
-{2}
-
-##Script stacktrace:
 {3}
 
-##Task JSON:
+##Script stacktrace:
 {4}
 
-"@ -f (Get-Date), $Target, $Message, $ScriptStackTrace, $TaskJson
+##Task JSON:
+{5}
+
+"@ -f (Get-Date), $idString, $Target, $Message, $ScriptStackTrace, $TaskJson
 }
 
 function Invoke-StoredProcedure
@@ -188,18 +195,4 @@ function Invoke-StoredProcedure
             [void]$cmd.ExecuteNonQuery()
         }
     }
-}
-
-function ConvertTo-NewtonsoftJson
-{
-    param
-    (
-        [Parameter(Mandatory=$true, ValueFromPipeline=$true, Position=0)]
-        [object]
-        $InputObject,
-        [Parameter(ValueFromPipelineByPropertyName=$true, Position=1)]
-        [Newtonsoft.Json.Formatting]
-        $Formatting = [Newtonsoft.Json.Formatting]::Indented
-    )
-    [Newtonsoft.Json.JsonConvert]::SerializeObject($InputObject, $Formatting) | Write-Output
 }

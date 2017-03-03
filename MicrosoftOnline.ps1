@@ -1,6 +1,7 @@
 ﻿# Make all error terminating errors
 $Global:ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\Config.ps1"
+Add-Type -Path "$PSScriptRoot\Kungsbacka.AccountTasks.dll"
 
 function Connect-KBAAzureAD
 {
@@ -54,7 +55,7 @@ function Set-KBAMsolUserLicense
         $License
     )
     $aadUser = Get-AzureADUser -ObjectId $UserPrincipalName
-    if (aadUser.UsageLocation -ne 'SE')
+    if ($aadUser.UsageLocation -ne 'SE')
     {
         # If MsExchUsageLocation hasn't synced yet, we set UsageLocation explicitly
         Set-AzureADUser -ObjectId $UserPrincipalName -UsageLocation $Script:Config.MicrosoftOnline.UsageLocation
@@ -133,10 +134,6 @@ function Get-KBAMsolPredefinedLicensePackage
         [string[]]
         $Package
     )
-    begin
-    {
-        Add-Type -Path 'Kungsbacka.AccountTasks.dll'
-    }
     process
     {
         foreach ($item in $Package)
