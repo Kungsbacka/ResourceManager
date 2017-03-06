@@ -5,12 +5,6 @@ $ErrorActionPreference = 'Stop'
 Import-Module -Name 'Microsoft.PowerShell.Utility'
 Import-Module -Name 'Microsoft.PowerShell.Management'
 Import-Module -Name 'Microsoft.PowerShell.Security'
-
-# When running a scheduled task as a gMSA the environment is not initialized properly.
-# For example LOCALAPPDATA points to C:\Users\Public and when Connect-AzureAD tries to
-# write it's logs to AppData it will fail. To work around the problem we set LOCALAPPDATA here.
-[Environment]::SetEnvironmentVariable('LOCALAPPDATA', $Script:Config.Environment.LocalAppData, 'User')
-
 Import-Module -Name 'ActiveDirectory'
 
 . "$PSScriptRoot\Config.ps1"
@@ -27,7 +21,6 @@ Enum TaskResult
 {
     Success
     Failure
-    Retry
     Wait
 }
 
@@ -37,19 +30,17 @@ function Start-Task
 {
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [object]
         $Task,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [object]
         $Target,
-        [Parameter(Mandatory = $false)]
         [object]
         $SequenceTask = $null
     )
     process
     {
-        $result = [TaskResult]::Failure
         if ($SequenceTask -eq $null)
         {
             $taskId = $Task.Id
@@ -61,14 +52,7 @@ function Start-Task
         # Do we know how to do this task?
         if (-not $Script:TaskDefinitions.ContainsKey($Task.TaskName))
         {
-            Write-ErrorLogEntry -TaskName $Task.TaskName -TaskId $taskId -Object ([pscustomobject]@{
-                Target    = $Target.UserPrincipalName
-                Activity  = 'Start-Task'
-                Reason    = 'Unknown task'
-                Message   = 'This task is not defined in the dispatcher.'
-            })
-            [TaskResult]::Failure
-            return
+            throw "Unknown task: $($Task.Name)"
         }
         # Do we need to wait?
         if ($Task.WaitUntil -ne $null)
@@ -76,15 +60,7 @@ function Start-Task
             $waitUntil = Get-Date -Date $Task.WaitUntil
             if ((Get-Date) -lt $waitUntil)
             {
-                if ($Task.TaskName -eq 'Wait')
-                {
-                    $result = [TaskResult]::Wait
-                }
-                else
-                {
-                    $result = [TaskResult]::Retry
-                }
-                $result
+                [TaskResult]::Wait
                 return
             }
         }
@@ -105,14 +81,7 @@ function Start-Task
             }
             else
             {
-                Write-ErrorLogEntry -TaskName $Task.TaskName -TaskId $taskId -Object ([pscustomobject]@{
-                    Target    = $Target.UserPrincipalName
-                    Activity  = 'Start-Task'
-                    Reason    = 'Parameter missing'
-                    Message   = "Mandatory parameter '$paramName' is missing"
-                })
-                [TaskResult]::Failure
-                return
+                throw "Mandatory parameter missing: $paramName"
             }
             $params = @{
                 InputObject = $Target
@@ -157,85 +126,31 @@ function Start-Task
                     NotePropertyValue = (Get-Date).AddMinutes($Task.Minutes).ToString('s')
                 }
                 Add-Member @params
-                $result = [TaskResult]::Wait
+                [TaskResult]::Wait
             }
             else
             {
-                $result = [TaskResult]::Success
+                [TaskResult]::Success
             }
-            $result
             return
         }
-        try
+        # Execute initializer if needed
+        $initializer = $Script:TaskDefinitions[$Task.TaskName].Initializer
+        if ($initializer -ne $null -and $initializer -notin $Script:ExecutedInitializers)
         {
-            # Execute initializer if needed
-            $initializer = $Script:TaskDefinitions[$Task.TaskName].Initializer
-            if ($initializer -ne $null -and $initializer -notin $Script:ExecutedInitializers)
-            {
-                &$initializer
-                $Script:ExecutedInitializers += $initializer
-            }
-            # Execute task
-            $Target | &$Script:TaskDefinitions[$Task.TaskName].Command
-            $result = [TaskResult]::Success
+            &$initializer
+            $Script:ExecutedInitializers += $initializer
         }
-        catch
-        {
-            Write-ErrorLogEntry -TaskName $Task.TaskName -TaskId $taskId -Object $_.TargetObject
-            if ($_.TargetObject.RetryCount -gt 0)
-            {
-                $params = @{
-                    InputObject = $Task
-                    NotePropertyName = 'WaitUntil'
-                    NotePropertyValue = (Get-Date).AddMinutes($_.TargetObject.Delay).ToString('s')
-                    Force = $true
-                }
-                Add-Member @params
-                if ($Task.RetryCount -eq $null)
-                {
-                    $params = @{
-                        InputObject = $Task
-                        NotePropertyName = 'RetryCount'
-                        NotePropertyValue = $_.TargetObject.RetryCount
-                    }
-                    Add-Member @params
-                    $result = [TaskResult]::Retry
-                }
-                else
-                {
-                    if (--$Task.RetryCount -gt 0)
-                    {
-                        $result = [TaskResult]::Retry
-                    }
-                    else
-                    {
-                        Write-ErrorLogEntry -TaskName $Task.TaskName -TaskId $taskId -Object ([pscustomobject]@{
-                            Target    = $Target.UserPrincipalName
-                            Activity  = 'Start-Task'
-                            Reason    = 'Task has failed completely'
-                            Message   = 'Retry limit reached.'
-                        })
-                    }
-                }
-            }
-            else
-            {
-                Write-ErrorLogEntry -TaskName $Task.TaskName -TaskId $taskId -Object ([pscustomobject]@{
-                    Target    = $Target.UserPrincipalName
-                    Activity  = 'Start-Task'
-                    Reason    = 'Task has failed completely'
-                    Message   = 'This task will not be retried.'
-                })   
-            }
-        }
-        $result
+        # Execute task
+        $Target | &$Script:TaskDefinitions[$Task.TaskName].Command
+        [TaskResult]::Success
         return
     }
 }
 
 # ExtensionAttribute9 contains the task objects serialized as json
 $params = @{
-    Filter = {ExtensionAttribute9 -like '*' -and Enabled -eq $true}
+    Filter = "ExtensionAttribute9 -like '*' -and Enabled -eq 'True' -and SamAccountName -eq 'jonmai'"
     Properties = @(
         'Department'
         'DisplayName'
@@ -251,7 +166,7 @@ try
     $users = Get-ADUser @params |
         ForEach-Object -Process {
             [pscustomobject]@{
-                Identity = $_.ObjectGUID
+                Identity = $_.ObjectGuid
                 UserPrincipalName = $_.UserPrincipalName
                 SamAccountName = $_.SamAccountName
                 ExtensionAttribute9 = $_.ExtensionAttribute9
@@ -264,12 +179,8 @@ try
 }
 catch
 {
-    Write-ErrorLogEntry -TaskName 'GetUsers' -TaskId -1 -Object ([pscustomobject]@{
-        Target    = '(&(extensionAttribute9=*)(!userAccountControl:1.2.840.113556.1.4.803:=2))'
-        Activity  = 'Get-ADUser'
-        Reason    = 'Failed to get users from Active Directory'
-        Message   = $_.Exception.Message
-    })
+    New-TaskLogEntry -Task 'QueryActiveDirectory' -Result ([TaskResult]::Failure)
+    Write-ErrorLog -ErrorRecord $_
     exit
 }
 foreach ($user in $users)
@@ -280,12 +191,8 @@ foreach ($user in $users)
     }
     catch
     {
-        Write-ErrorLogEntry -TaskName 'ProcessTasks' -TaskId -1 -Object ([pscustomobject]@{
-            Target    = $user.UserPrincipalName
-            Activity  = 'ConvertFrom-Json'
-            Reason    = 'Failed to deserialize the contents of ExtensionAttribute9'
-            Message   = $_.Exception.Message
-        })
+        New-TaskLogEntry -Task 'DeserializeTaskJson' -Result ([TaskResult]::Failure)
+        Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
         continue
     }
     $remainingTasks = @()
@@ -308,7 +215,16 @@ foreach ($user in $users)
         {
             while ($currentTask.Tasks.Count -gt 0)
             {
-                $result = Start-Task -Task $currentTask.Tasks[0] -Target $user -SequenceTask $currentTask
+                try
+                {
+                    $result = Start-Task -Task $currentTask.Tasks[0] -Target $user -SequenceTask $currentTask
+                }
+                catch
+                {
+                    Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
+                    Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask
+                    break
+                }
                 if ($result -eq [TaskResult]::Success)
                 {
                     if ($currentTask.Tasks.Count -gt 1)
@@ -322,15 +238,10 @@ foreach ($user in $users)
                         $currentTask.Tasks = @()
                     }
                 }
-                elseif ($result -eq [TaskResult]::Retry -or $result -eq [TaskResult]::Wait)
+                else # [TaskResult]::Wait
                 {
                     $remainingTasks += $currentTask
                     Update-TaskLogEntry -TaskId $currentTask.Id -Result $result
-                    break
-                }
-                else # [TaskResult]::Failure
-                {
-                    Update-TaskLogEntry -TaskId $currentTask.Id -Result $result -EndTask
                     break
                 }
             }
@@ -338,39 +249,42 @@ foreach ($user in $users)
         # Single task
         else
         {
-            $result = Start-Task -Task $currentTask -Target $user
-            if ($result -eq [TaskResult]::Retry)
+            try
             {
-                $remainingTasks += $currentTask
-                Update-TaskLogEntry -TaskId $currentTask.Id -Result $result
+                $result = Start-Task -Task $currentTask -Target $user
             }
-            elseif ($result -eq [TaskResult]::Wait)
+            catch
+            {
+                Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
+                Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask
+                continue
+            }
+            if ($result -eq [TaskResult]::Wait)
             {
                 $remainingTasks += $deserializedTasks[$i..($deserializedTasks.Count - 1)]
                 Update-TaskLogEntry -TaskId $currentTask.Id -Result $result
-                break
             }
-            else
+            else # [TaskResult]::Success
             {
                 Update-TaskLogEntry -TaskId $currentTask.Id -Result $result -EndTask
             }
         }
     }
     # If we have tasks left, save them back to ExtensionAttribute9. If this attribute was cleared
-    # while the tasks were executed, we assume someone don't want to execute the remaining tasks.
+    # while the tasks were executed, we assume someone didn't want to execute the remaining tasks.
     try
     {
+        $user2 = Get-ADUser -Filter "ObjectGuid -eq '$($user.Identity)'" -Properties 'ExtensionAttribute9'
+        if ($user2 -eq $null)
+        {
+            exit
+        }
         if ($remainingTasks.Count -gt 0)
         {
-            $json = ConvertTo-Json -InputObject $remainingTasks -Depth 3 -Compress
-            $params = @{
-                Identity = $user.Identity
-                Properties = @('ExtensionAttribute9')
-                ErrorAction = 'SilentlyContinue'
-            }
-            if ($null -ne (Get-ADUser @params).ExtensionAttribute9)
+            if ($user2.ExtensionAttribute9 -ne $null)
             {
-                Set-ADUser -Identity $user.Identity -Replace @{ExtensionAttribute9=$json}
+                $json = ConvertTo-Json -InputObject $remainingTasks -Depth 4 -Compress
+                Set-ADUser -Identity $user.Identity -Replace @{'ExtensionAttribute9'=$json}
             }
         }
         else
@@ -380,11 +294,7 @@ foreach ($user in $users)
     }
     catch
     {
-        Write-ErrorLogEntry -TaskName 'ProcessTasks' -TaskId -1 -Object ([pscustomobject]@{
-            Target    = $user.UserPrincipalName
-            Activity  = 'Save remaining tasks'
-            Reason    = ''
-            Message   = $_.Exception.Message
-        })
+        New-TaskLogEntry -Task 'SaveRemaningTasks' -Result ([TaskResult]::Failure)
+        Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName
     }
 }

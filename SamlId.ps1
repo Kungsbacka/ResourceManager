@@ -4,126 +4,40 @@ $Global:ErrorActionPreference = 'Stop'
 
 function Set-SamlId
 {
-    [CmdLetBinding()]
     param
     (
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [string]$SamAccountName,
-        [switch]$Force
+        [string]
+        $SamAccountName,
+        [switch]
+        $Force
     )
-    process
+    $user = Get-ADUser -Identity $SamAccountName -Properties 'ExtensionAttribute14'
+    $hasValue = $user.ExtensionAttribute14 -ne $null
+    if ($hasValue -and -not $Force)
     {
-        try
+        throw "ExtensionAttribute14 is not empty. Use Force to overwrite."
+    }
+    $set = 'abcdefghijkmnpqrstuvxyz23456789'
+    do
+    {
+        $id = ''
+        for ($i = 0; $i -lt 16; $i++)
         {
-            $params = @{
-                Identity = $SamAccountName
-                Properties = 'ExtensionAttribute14'
-            }
-            $user = Get-ADUser @params
+            $id += $set.GetEnumerator() | Get-Random
         }
-        catch
+        $id += '@' + $Script:Config.SamlId.Domain
+    }
+    while ((Get-ADUser -Filter {ExtensionAttribute14 -eq $id}))
+    if ($hasValue)
+    {
+        if ($Force)
         {
-            throw [pscustomobject]@{
-                Target     = $SamAccountName
-                Activity   = $MyInvocation.MyCommand.Name
-                Reason     = 'Get-ADUser failed with identity'
-                Message    = $_.Exception.Message
-                RetryCount = 3
-                Delay      = 5
-            }
+            Set-ADUser -Identity $SamAccountName -Replace @{ExtensionAttribute14 = $id}
         }
-        $hasValue = $user.ExtensionAttribute14 -ne $null
-        if ($hasValue)
-        {
-            if ($Force)
-            {
-                Write-Warning 'User already has a value in ExtensionAttribute14. This value will be overwritten!'
-            }
-            else
-            {
-                throw [pscustomobject]@{
-                    Target     = $SamAccountName
-                    Activity   = $MyInvocation.MyCommand.Name
-                    Reason     = 'ExtensionAttribute14 is not empty'
-                    Message    = 'User already has a value in ExtensionAttribute14. Force was not specified.'
-                    RetryCount = 0
-                    Delay      = 0
-                }
-            }
-        }
-        $set = 'abcdefghijkmnpqrstuvxyz23456789'
-        $exists = $false
-        do
-        {
-            $id = ''
-            for ($i = 0; $i -lt 16; $i++)
-            {
-                $id += $set.GetEnumerator() | Get-Random
-            }
-            $id += '@' + $Script:Config.SamlId.Domain
-            try
-            {
-                if ((Get-ADUser -Filter {ExtensionAttribute14 -eq $id}))
-                {
-                    $exists = $true
-                }
-            }
-            catch
-            {
-                throw [pscustomobject]@{
-                    Target     = $SamAccountName
-                    Activity   = $MyInvocation.MyCommand.Name
-                    Reason     = 'Get-ADUser failed with filter'
-                    Message    = $_.Exception.Message
-                    RetryCount = 3
-                    Delay      = 5
-                }
-            }
-        }
-        while ($exists)
-        if ($hasValue -and $Force)
-        {
-            try
-            {
-                $params = @{
-                    Identity = $SamAccountName
-                    Replace = @{ExtensionAttribute14 = $id}
-                }
-                Set-ADUser @params
-            }
-            catch
-            {
-                throw [pscustomobject]@{
-                    Target     = $SamAccountName
-                    Activity   = $MyInvocation.MyCommand.Name
-                    Reason     = 'Set-ADUser failed with replace'
-                    Message    = $_.Exception.Message
-                    RetryCount = 3
-                    Delay      = 5
-                }
-            }
-        }
-        else
-        {
-            try
-            {
-                $params = @{
-                    Identity = $SamAccountName
-                    Add = @{ExtensionAttribute14 = $id}
-                }
-                Set-ADUser @params
-            }
-            catch
-            {
-                throw [pscustomobject]@{
-                    Target     = $SamAccountName
-                    Activity   = $MyInvocation.MyCommand.Name
-                    Reason     = 'Set-ADUser failed with add'
-                    Message    = $_.Exception.Message
-                    RetryCount = 3
-                    Delay      = 5
-                }
-            }
-        }
+    }
+    else
+    {
+        Set-ADUser -Identity $SamAccountName -Add @{ExtensionAttribute14 = $id}
     }
 }

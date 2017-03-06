@@ -2,25 +2,16 @@
 $Global:ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\Config.ps1"
 
-Enum TaskResult
-{
-    Success
-    Failure
-    Retry
-    Wait
-}
-
 function Update-TaskLogEntry
 {
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [int]
         $TaskId,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [TaskResult]
         $Result,
-        [Parameter(Mandatory = $false)]
         [switch]
         $EndTask
     )
@@ -46,48 +37,126 @@ function New-TaskLogEntry
 {
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [string]
         $Task,
-        [Parameter(Mandatory = $true)]
         [string]
-        $Target
+        $Target,
+        [TaskResult]
+        $Result
     )
     process
     {
-        Invoke-StoredProcedure -Procedure 'dbo.spInsertNewTaskLogEntry' -Scalar -Parameters @{
+        $id = Invoke-StoredProcedure -Procedure 'dbo.spInsertNewTaskLogEntry' -Scalar -Parameters @{
             Task = $Task
             Target = $Target
+        }
+        if ($Result)
+        {
+            Invoke-StoredProcedure -Procedure 'dbo.spUpdateTaskLogEntry' -Parameters @{
+                TaskId = $id
+                Status = $Result.ToString()
+                End = 1
+            }
+        }
+        else
+        {
+            $id
         }
     }
 }
 
-function Write-ErrorLogEntry
+function Write-ErrorLog
 {
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true,ValueFromPipeline=$true,ParameterSetName='ErrorRecord')]
+        [object]
+        $ErrorRecord,
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true,ParameterSetName='CustomError')]
+        [string]
+        $Message,
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
         [int]
         $TaskId,
-        [Parameter(Mandatory = $true)]
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
         [string]
-        $TaskName,
-        [Parameter(Mandatory = $true)]
-        [System.Object]
-        $Object
+        $Target,
+        [Parameter(ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $TaskJson
     )
-    process
+    if ($Message)
     {
-        Invoke-StoredProcedure -Procedure 'dbo.spInsertNewTaskErrorLogEntry' -Parameters @{
+        $params = @{
+            Target = $Target
+            Message = $Message
             TaskId = $TaskId
-            Task = $TaskName
-            Target = $Object.Target
-            Activity = $Object.Activity
-            Reason = $Object.Reason
-            Message = $Object.Message
+            TaskJson = $TaskJson
         }
-  
     }
+    else
+    {
+        $params = @{
+            Target = $Target
+            Message = $ErrorRecord.Exception.ToString()
+            TaskId = $TaskId
+            ScriptStackTrace = $ErrorRecord.ScriptStackTrace
+            TaskJson = $TaskJson
+        }
+    }
+    $text = Get-ErrorText @params
+    $currentLog = Get-ChildItem -Path $Script:Config.Logger.LogPath -Filter '*.log' |
+        Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1
+    if ($currentLog.LastWriteTime -lt ((Get-Date).AddMonths(-1)))
+    {
+        $fileName = 'rmgr_' + (Get-Date).ToString('yyyyMMdd_HHmmss') + '.log'
+        $newLogFile = Join-Path -Path $Script:Config.Logger.LogPath -ChildPath $fileName
+        $currentLog = New-Item -Path $newLogFile -ItemType File
+    }
+    $text | Out-File -FilePath $currentLog.FullName -Encoding UTF8 -Append
+}
+
+function Get-ErrorText
+{
+    param
+    (
+        [string]$TaskId,
+        [string]$Target,
+        [string]$Message,
+        [string]$ScriptStackTrace,
+        [string]$TaskJson
+    )
+    if ($TaskJson)
+    {
+        # Make sure JSON is properly formatted
+        $obj = $TaskJson | ConvertFrom-Json
+        $TaskJson = $obj | ConvertTo-Json -Depth 4
+    }
+    if ($TaskId)
+    {
+        $idString = 'ID #' + $TaskId
+    }
+    else
+    {
+        $idString = ''
+    }
+@"
+---------------------------------------------------
+---- {0}  {1}
+---------------------------------------------------
+##Target: {2}
+
+##Exception:
+{3}
+
+##Script stacktrace:
+{4}
+
+##Task JSON:
+{5}
+
+"@ -f (Get-Date), $idString, $Target, $Message, $ScriptStackTrace, $TaskJson
 }
 
 function Invoke-StoredProcedure
