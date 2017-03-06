@@ -1,7 +1,6 @@
 ﻿# Make all error terminating errors
 $Global:ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\Config.ps1"
-Add-Type -Path "$PSScriptRoot\Kungsbacka.AccountTasks.dll"
 
 function Connect-KBAAzureAD
 {

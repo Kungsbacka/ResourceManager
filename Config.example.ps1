@@ -2,7 +2,7 @@
 $Config = @{
     Logger = @{
         ConnectionString = 'Server=<Server>;Database=<Database>;Integrated Security=True'
-        LogPath = 'C:\Temp'
+        LogPath = '<log directory>'
     }
     HomeFolder = @{
         Domain = '<AD domain>'
@@ -23,7 +23,7 @@ $Config = @{
     # Start a new PowerShell prompt as that user and run (Get-Credential).Password | ConvertFrom-SecureString
     # to encrypt the password.
     Office365 = @{
-        MsolUser = '<Office 365 user with permission to manage users>'
+        MsolUser = '<Office 365 user with permissions to manage users>'
         MsolPassword = '<encrypted password>'
     }
     ExchangeOnprem = @{
@@ -31,7 +31,7 @@ $Config = @{
             '<server1>'
             '<server2>'
             '<server3>'
-            # To distribute load, add as many as needed.
+            'etc'
         )
         ExchangeOnlineMailDomain = '<your tennant>.mail.onmicrosoft.com'
         Mailbox = @{
@@ -56,9 +56,9 @@ $Config = @{
             TimeZone = 'W. Europe Standard Time'
             Language = 'sv-SE'
             LocalizeDefaultFolderName = $true
-            OwaMailboxPolicy = '<Policy GUID>' # KBA Active Sync Integration Disabled
+            OwaMailboxPolicy = '<Policy GUID>'
             Student = @{
-                OwaMailboxPolicy = '<Policy GUID>' # Elever Kungsbacka OWA Policy
+                OwaMailboxPolicy = '<Policy GUID>'
             }
         }   
         Calendar = @{
@@ -67,8 +67,8 @@ $Config = @{
             ShowWeekNumbers = $true
             WeekStartDay = 'Monday'
             FirstWeekOfYear = 'FirstFourDayWeek'
-            WorkingHoursStartTime = '07:30:00'
-            WorkingHoursEndTime = '17:30:00'
+            WorkingHoursStartTime = '08:00:00'
+            WorkingHoursEndTime = '17:00:00'
             Student = @{
                 WorkingHoursStartTime = '08:00:00'
                 WorkingHoursEndTime = '16:00:00'
