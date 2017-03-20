@@ -150,7 +150,7 @@ function Start-Task
 
 # ExtensionAttribute9 contains the task objects serialized as json
 $params = @{
-    Filter = "ExtensionAttribute9 -like '*' -and Enabled -eq 'True' -and SamAccountName -eq 'jonmai'"
+    Filter = "ExtensionAttribute9 -like '*' -and Enabled -eq 'True'"
     Properties = @(
         'Department'
         'DisplayName'
