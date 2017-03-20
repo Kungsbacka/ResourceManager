@@ -121,7 +121,7 @@ function Get-ErrorText
 {
     param
     (
-        [string]$TaskId,
+        [int]$TaskId,
         [string]$Target,
         [string]$Message,
         [string]$ScriptStackTrace,
@@ -133,7 +133,7 @@ function Get-ErrorText
         $obj = $TaskJson | ConvertFrom-Json
         $TaskJson = $obj | ConvertTo-Json -Depth 4
     }
-    if ($TaskId)
+    if ($TaskId -gt 0)
     {
         $idString = 'ID #' + $TaskId
     }

@@ -1,4 +1,4 @@
-# Resource Manager
+﻿# Resource Manager
 
 Resource Manager is a tool for creating and managing user resources. It can currently:
 * Create mailboxes - both on-prem and in Office 365

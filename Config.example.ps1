@@ -1,4 +1,4 @@
-# Configuration
+﻿# Configuration
 $Config = @{
     Logger = @{
         ConnectionString = 'Server=<Server>;Database=<Database>;Integrated Security=True'

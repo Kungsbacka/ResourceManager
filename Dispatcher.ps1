@@ -199,6 +199,19 @@ foreach ($user in $users)
     for ($i = 0; $i -lt $deserializedTasks.Count; $i++)
     {
         $currentTask = $deserializedTasks[$i]
+        if (-not $currentTask.TaskName)
+        {
+            try
+            {
+                throw 'TaskName is empty or missing'
+            }
+            catch
+            {
+                New-TaskLogEntry -Task 'ValidateDeserializedTaskJson' -Result ([TaskResult]::Failure)
+                Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
+                exit        
+            }
+        }
         $isSequenceTask = ($currentTask.Tasks -ne $null -and $currentTask.Tasks.Count -gt 0)
         if ($currentTask.Id -eq $null)
         {

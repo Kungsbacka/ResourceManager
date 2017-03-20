@@ -1,4 +1,4 @@
-$Script:TaskDefinitions = @{
+﻿$Script:TaskDefinitions = @{
     EnableMailbox = @{
         Command = 'Enable-KBAOnpremMailbox'
         Initializer = 'Connect-KBAExchangeOnprem'
