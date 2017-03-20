@@ -2,6 +2,13 @@
 $Global:ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\Config.ps1"
 
+Enum TaskResult
+{
+    Success
+    Failure
+    Wait
+}
+
 function Update-TaskLogEntry
 {
     param
@@ -121,7 +128,7 @@ function Get-ErrorText
 {
     param
     (
-        [int]$TaskId,
+        [string]$TaskId,
         [string]$Target,
         [string]$Message,
         [string]$ScriptStackTrace,
@@ -133,7 +140,7 @@ function Get-ErrorText
         $obj = $TaskJson | ConvertFrom-Json
         $TaskJson = $obj | ConvertTo-Json -Depth 4
     }
-    if ($TaskId -gt 0)
+    if ($TaskId)
     {
         $idString = 'ID #' + $TaskId
     }
