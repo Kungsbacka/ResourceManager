@@ -148,13 +148,13 @@ function Start-Task
     }
 }
 
-# ExtensionAttribute9 contains the task objects serialized as json
+# GenerationQualifier contains the task objects serialized as json
 $params = @{
-    Filter = "ExtensionAttribute9 -like '*' -and Enabled -eq 'True'"
+    Filter = "GenerationQualifier -like '*' -and Enabled -eq 'True'"
     Properties = @(
         'Department'
         'DisplayName'
-        'ExtensionAttribute9'
+        'GenerationQualifier'
         'SamAccountName'
         'TelephoneNumber'
         'Title'
@@ -169,7 +169,7 @@ try
                 Identity = $_.ObjectGuid
                 UserPrincipalName = $_.UserPrincipalName
                 SamAccountName = $_.SamAccountName
-                ExtensionAttribute9 = $_.ExtensionAttribute9
+                GenerationQualifier = $_.GenerationQualifier
                 DisplayName = $_.DisplayName
                 Department = $_.Department
                 Title = $_.Title
@@ -187,12 +187,12 @@ foreach ($user in $users)
 {
     try
     {
-        $deserializedTasks = ConvertFrom-Json -InputObject $user.ExtensionAttribute9
+        $deserializedTasks = ConvertFrom-Json -InputObject $user.GenerationQualifier
     }
     catch
     {
         New-TaskLogEntry -Task 'DeserializeTaskJson' -Result ([TaskResult]::Failure)
-        Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
+        Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.GenerationQualifier
         continue
     }
     $remainingTasks = @()
@@ -208,7 +208,7 @@ foreach ($user in $users)
             catch
             {
                 New-TaskLogEntry -Task 'ValidateDeserializedTaskJson' -Result ([TaskResult]::Failure)
-                Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
+                Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.GenerationQualifier
                 exit        
             }
         }
@@ -234,7 +234,7 @@ foreach ($user in $users)
                 }
                 catch
                 {
-                    Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
+                    Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.GenerationQualifier
                     Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask
                     break
                 }
@@ -268,7 +268,7 @@ foreach ($user in $users)
             }
             catch
             {
-                Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.ExtensionAttribute9
+                Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.GenerationQualifier
                 Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask
                 continue
             }
@@ -283,26 +283,26 @@ foreach ($user in $users)
             }
         }
     }
-    # If we have tasks left, save them back to ExtensionAttribute9. If this attribute was cleared
+    # If we have tasks left, save them back to GenerationQualifier. If this attribute was cleared
     # while the tasks were executed, we assume someone didn't want to execute the remaining tasks.
     try
     {
-        $user2 = Get-ADUser -Filter "ObjectGuid -eq '$($user.Identity)'" -Properties 'ExtensionAttribute9'
+        $user2 = Get-ADUser -Filter "ObjectGuid -eq '$($user.Identity)'" -Properties 'GenerationQualifier'
         if ($user2 -eq $null)
         {
             exit
         }
         if ($remainingTasks.Count -gt 0)
         {
-            if ($user2.ExtensionAttribute9 -ne $null)
+            if ($user2.GenerationQualifier -ne $null)
             {
                 $json = ConvertTo-Json -InputObject $remainingTasks -Depth 4 -Compress
-                Set-ADUser -Identity $user.Identity -Replace @{'ExtensionAttribute9'=$json}
+                Set-ADUser -Identity $user.Identity -Replace @{'GenerationQualifier'=$json}
             }
         }
         else
         {
-            Set-ADUser -Identity $user.Identity -Clear 'ExtensionAttribute9'
+            Set-ADUser -Identity $user.Identity -Clear 'GenerationQualifier'
         }
     }
     catch
