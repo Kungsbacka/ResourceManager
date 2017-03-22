@@ -13,18 +13,27 @@ Enum TestMailboxResult
 
 function Connect-KBAExchangeOnprem
 {
+    param
+    (
+        [pscredential]
+        [System.Management.Automation.Credential()]
+        $Credential
+    )
     $server = $Script:Config.ExchangeOnprem.Servers | Get-Random
     Get-PSSession -Name 'KBAExchOnprem' -ErrorAction SilentlyContinue | Remove-PSSession
-    $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
-        $Script:Config.ExchangeOnprem.User
-        $Script:Config.ExchangeOnprem.Password | ConvertTo-SecureString
-    )
+    if ($Credential -eq $null)
+    {
+        $Credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
+            $Script:Config.ExchangeOnprem.User
+            $Script:Config.ExchangeOnprem.Password | ConvertTo-SecureString
+        )
+    }
     $params = @{
         Name = 'KBAExchOnprem'
         ConfigurationName = 'Microsoft.Exchange'
         ConnectionUri = "http://$server/PowerShell/"
         Authentication = 'Kerberos'
-        Credential = $credential
+        Credential = $Credential
     }
     $session = New-PSSession @params
     $params = @{
@@ -32,10 +41,13 @@ function Connect-KBAExchangeOnprem
         Prefix = 'Onprem'
         DisableNameChecking = $true
         CommandName = @(
+            'Connect-Mailbox'
+            'Disable-Mailbox'
             'Enable-Mailbox'
             'Enable-RemoteMailbox'
             'Get-Mailbox'
             'Get-RemoteMailbox'
+            'Get-MailboxStatistics'
             'Get-MailboxFolderStatistics'
             'Get-MailboxDatabase'
             'Set-Mailbox'
@@ -229,6 +241,7 @@ function Set-KBAOnpremMailbox
     {
         $params = @{
             Identity = $UserPrincipalName
+            PrimarySmtpAddress = $UserPrincipalName
             EmailAddressPolicyEnabled = $Script:Config.ExchangeOnprem.Mailbox.EmailAddressPolicyEnabled
             RetentionPolicy = $Script:Config.ExchangeOnprem.Mailbox.Student.RetentionPolicy
             AddressBookPolicy = $Script:Config.ExchangeOnprem.Mailbox.Student.AddressBookPolicy
@@ -242,6 +255,7 @@ function Set-KBAOnpremMailbox
     {
         $params = @{
             Identity = $UserPrincipalName
+            PrimarySmtpAddress = $UserPrincipalName
             EmailAddressPolicyEnabled = $Script:Config.ExchangeOnprem.Mailbox.EmailAddressPolicyEnabled
             RetentionPolicy = $Script:Config.ExchangeOnprem.Mailbox.RetentionPolicy
             AddressBookPolicy = $Script:Config.ExchangeOnprem.Mailbox.AddressBookPolicy
@@ -393,6 +407,64 @@ function Enable-KBAOnpremRemoteMailbox
     # Not sure why this is needed, but sometimes Enable-RemoteMailbox
     # fails if this is not present. Initially 10.
     Start-Sleep -Seconds 5
+}
+
+function Disable-KBAOnpremMailbox
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $UserPrincipalName
+    )
+    $result = Test-KBAOnpremMailbox $UserPrincipalName
+    if ($result -ne [TestMailboxResult]::Onprem)
+    {
+        throw 'Target account has no on-prem mailbox'
+    }
+    Disable-OnpremMailbox -Identity $UserPrincipalName -Confirm:$false | Out-Null
+}
+
+function Connect-KBAOnpremMailbox
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $UserPrincipalName,
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $SamAccountName
+    )
+    $result = Test-KBAOnpremMailbox $UserPrincipalName
+    if ($result -eq [TestMailboxResult]::Onprem)
+    {
+        throw 'Target alread has an on-prem mailbox'
+    }
+    if ($result -eq [TestMailboxResult]::Remote)
+    {
+        throw 'Target alread has an remote mailbox'
+    }
+    $user = Get-ADUser -Identity $SamAccountName -Properties LegacyExchangeDn
+    if (-not $user.LegacyExchangeDn)
+    {
+        throw 'No disconnected mailbox exists for target'
+    }
+    $disconnectedMailboxes = 
+        Get-OnpremMailboxDatabase | 
+        Get-OnpremMailboxStatistics -Filter "LegacyDn -eq '$($user.LegacyExchangeDn)'" -NoADLookup | 
+        Sort-Object -Property DisconnectDate -Descending
+
+    if ($disconnectedMailboxes.Count -eq 0 -or $disconnectedMailboxes[0].DisconnectDate -eq $null)
+    {
+        throw 'No disconnected mailbox exists for target'
+    }
+    $param = @{
+        Identity = $user.LegacyExchangeDn
+        Database = $disconnectedMailboxes[0].Database.ToString()
+        Force = $true
+    }
+    Connect-OnpremMailbox @param
 }
 
 function Set-KBAOnpremMailboxAutoReplyState

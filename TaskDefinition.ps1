@@ -11,6 +11,18 @@
         Parameters = @()
         OptionalParameters = @()
     }
+    DisableMailbox = @{
+        Command = 'Disable-KBAOnpremMailbox'
+        Initializer = 'Connect-KBAExchangeOnprem'
+        Parameters = @()
+        OptionalParameters = @()
+    }
+    ConnectMailbox = @{
+        Command = 'Connect-KBAOnpremMailbox'
+        Initializer = 'Connect-KBAExchangeOnprem'
+        Parameters = @()
+        OptionalParameters = @()
+    }
     ConfigureMailbox = @{
         Command = 'Set-KBAOnpremMailbox'
         Initializer = 'Connect-KBAExchangeOnprem'

@@ -61,7 +61,7 @@ function Enable-KBAOnpremCSUser
     )
     process
     {
-        if (Test-KBAOnpremCSUser $UserPrincipalNamed)
+        if (Test-KBAOnpremCSUser $UserPrincipalName)
         {
             throw 'Target is already Skype enabled.'
         }
