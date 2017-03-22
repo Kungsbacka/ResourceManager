@@ -148,13 +148,13 @@ function Start-Task
     }
 }
 
-# GenerationQualifier contains the task objects serialized as json
+# CarLicense contains the task objects serialized as json
 $params = @{
-    Filter = "GenerationQualifier -like '*' -and Enabled -eq 'True'"
+    Filter = "CarLicense -like '*' -and Enabled -eq 'True'"
     Properties = @(
         'Department'
         'DisplayName'
-        'GenerationQualifier'
+        'CarLicense'
         'SamAccountName'
         'TelephoneNumber'
         'Title'
@@ -169,7 +169,7 @@ try
                 Identity = $_.ObjectGuid
                 UserPrincipalName = $_.UserPrincipalName
                 SamAccountName = $_.SamAccountName
-                GenerationQualifier = $_.GenerationQualifier
+                CarLicense = $_.CarLicense
                 DisplayName = $_.DisplayName
                 Department = $_.Department
                 Title = $_.Title
@@ -187,12 +187,12 @@ foreach ($user in $users)
 {
     try
     {
-        $deserializedTasks = ConvertFrom-Json -InputObject $user.GenerationQualifier
+        $deserializedTasks = ConvertFrom-Json -InputObject $user.CarLicense[0] # Multivalued attribute
     }
     catch
     {
         New-TaskLogEntry -Task 'DeserializeTaskJson' -Result ([TaskResult]::Failure)
-        Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.GenerationQualifier
+        Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.CarLicense
         continue
     }
     $remainingTasks = @()
@@ -208,7 +208,7 @@ foreach ($user in $users)
             catch
             {
                 New-TaskLogEntry -Task 'ValidateDeserializedTaskJson' -Result ([TaskResult]::Failure)
-                Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.GenerationQualifier
+                Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.CarLicense
                 exit        
             }
         }
@@ -234,7 +234,7 @@ foreach ($user in $users)
                 }
                 catch
                 {
-                    Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.GenerationQualifier
+                    Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.CarLicense
                     Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask
                     break
                 }
@@ -268,7 +268,7 @@ foreach ($user in $users)
             }
             catch
             {
-                Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.GenerationQualifier
+                Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.CarLicense
                 Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask
                 continue
             }
@@ -283,26 +283,26 @@ foreach ($user in $users)
             }
         }
     }
-    # If we have tasks left, save them back to GenerationQualifier. If this attribute was cleared
+    # If we have tasks left, save them back to CarLicense. If this attribute was cleared
     # while the tasks were executed, we assume someone didn't want to execute the remaining tasks.
     try
     {
-        $user2 = Get-ADUser -Filter "ObjectGuid -eq '$($user.Identity)'" -Properties 'GenerationQualifier'
+        $user2 = Get-ADUser -Filter "ObjectGuid -eq '$($user.Identity)'" -Properties 'CarLicense'
         if ($user2 -eq $null)
         {
             exit
         }
         if ($remainingTasks.Count -gt 0)
         {
-            if ($user2.GenerationQualifier -ne $null)
+            if ($user2.CarLicense -ne $null)
             {
                 $json = ConvertTo-Json -InputObject $remainingTasks -Depth 4 -Compress
-                Set-ADUser -Identity $user.Identity -Replace @{'GenerationQualifier'=$json}
+                Set-ADUser -Identity $user.Identity -Replace @{'CarLicense'=$json}
             }
         }
         else
         {
-            Set-ADUser -Identity $user.Identity -Clear 'GenerationQualifier'
+            Set-ADUser -Identity $user.Identity -Clear 'CarLicense'
         }
     }
     catch

@@ -9,6 +9,10 @@ Resource Manager is a tool for creating and managing user resources. It can curr
 
 Just like Lifecycle Manager, Resource Manager is built specifically for Kungsbacka kommun and is not meant for general use.
 
+Tasks are stored as JSON in attribute carLicense on each user object processed by Resource manager. This attribute was chosen
+because it's not indexed and replicated to neither Global Catalog nor Azure AD. [Kungsbacka.AccountTasks](https://github.com/Kungsbacka/Kungsbacka.AccountTasks)
+can be used to generate task JSON or parse task JSON into objects.
+
 I had to make a few workarounds to get the scripts to run in a scheduled task under a Group Managed Service Account (gMSA).
 Under these specific conditions the environment doesn't get properly initialized. Default modules are not loaded and 
 environment variables are not set properly. You can find more information in
