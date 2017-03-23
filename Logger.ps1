@@ -113,9 +113,9 @@ function Write-ErrorLog
         }
     }
     $text = Get-ErrorText @params
-    $currentLog = Get-ChildItem -Path $Script:Config.Logger.LogPath -Filter '*.log' |
+    $currentLog = Get-ChildItem -Path $Script:Config.Logger.LogPath -Filter 'rmgr_*.log' |
         Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1
-    if ($currentLog.LastWriteTime -lt ((Get-Date).AddMonths(-1)))
+    if ($currentLog.LastWriteTime -lt ((Get-Date).AddDays((-7)))
     {
         $fileName = 'rmgr_' + (Get-Date).ToString('yyyyMMdd_HHmmss') + '.log'
         $newLogFile = Join-Path -Path $Script:Config.Logger.LogPath -ChildPath $fileName
