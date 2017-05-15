@@ -1,10 +1,6 @@
 ﻿# Make all error terminating errors
 $ErrorActionPreference = 'Stop'
 
-# Import-Module statements below are a workaround to make the script run with a gMSA
-Import-Module -Name 'Microsoft.PowerShell.Utility'
-Import-Module -Name 'Microsoft.PowerShell.Management'
-Import-Module -Name 'Microsoft.PowerShell.Security'
 Import-Module -Name 'ActiveDirectory'
 
 . "$PSScriptRoot\Config.ps1"
@@ -191,7 +187,7 @@ foreach ($user in $users)
     }
     catch
     {
-        New-TaskLogEntry -Task 'DeserializeTaskJson' -Result ([TaskResult]::Failure)
+        New-TaskLogEntry -Task 'DeserializeTaskJson' -Target $user.UserPrincipalName -Result ([TaskResult]::Failure)
         Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.CarLicense
         continue
     }
@@ -207,7 +203,7 @@ foreach ($user in $users)
             }
             catch
             {
-                New-TaskLogEntry -Task 'ValidateDeserializedTaskJson' -Result ([TaskResult]::Failure)
+                New-TaskLogEntry -Task 'ValidateDeserializedTaskJson' -Target $user.UserPrincipalName -Result ([TaskResult]::Failure)
                 Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.CarLicense
                 exit        
             }
@@ -307,7 +303,7 @@ foreach ($user in $users)
     }
     catch
     {
-        New-TaskLogEntry -Task 'SaveRemaningTasks' -Result ([TaskResult]::Failure)
+        New-TaskLogEntry -Task 'SaveRemaningTasks' -Target $user.UserPrincipalName -Result ([TaskResult]::Failure)
         Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName
     }
 }

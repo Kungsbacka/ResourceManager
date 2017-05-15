@@ -32,7 +32,7 @@ function Update-TaskLogEntry
         {
             $end = 0
         }
-        Invoke-StoredProcedure -Procedure 'dbo.spUpdateTaskLogEntry' -Parameters @{
+        Invoke-StoredProcedure -Procedure 'dbo.spRmUpdateLogEntry' -Parameters @{
             TaskId = $TaskId
             Status = $Result.ToString()
             End = $end
@@ -54,13 +54,13 @@ function New-TaskLogEntry
     )
     process
     {
-        $id = Invoke-StoredProcedure -Procedure 'dbo.spInsertNewTaskLogEntry' -Scalar -Parameters @{
+        $id = Invoke-StoredProcedure -Procedure 'dbo.spRmNewLogEntry' -Scalar -Parameters @{
             Task = $Task
             Target = $Target
         }
         if ($Result)
         {
-            Invoke-StoredProcedure -Procedure 'dbo.spUpdateTaskLogEntry' -Parameters @{
+            Invoke-StoredProcedure -Procedure 'dbo.spRmUpdateLogEntry' -Parameters @{
                 TaskId = $id
                 Status = $Result.ToString()
                 End = 1
@@ -115,7 +115,7 @@ function Write-ErrorLog
     $text = Get-ErrorText @params
     $currentLog = Get-ChildItem -Path $Script:Config.Logger.LogPath -Filter 'rmgr_*.log' |
         Sort-Object -Property LastWriteTime -Descending | Select-Object -First 1
-    if ($currentLog.LastWriteTime -lt ((Get-Date).AddDays((-7)))
+    if ($currentLog.LastWriteTime -lt ((Get-Date).AddDays(-7)))
     {
         $fileName = 'rmgr_' + (Get-Date).ToString('yyyyMMdd_HHmmss') + '.log'
         $newLogFile = Join-Path -Path $Script:Config.Logger.LogPath -ChildPath $fileName
