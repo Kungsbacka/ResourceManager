@@ -62,7 +62,10 @@ function Set-KBAMsolUserLicense
     $removeLicenses = New-Object 'System.Collections.Generic.List[string]'
     foreach ($item in $aadUser.AssignedLicenses)
     {
-        $removeLicenses.Add($item.SkuId)
+        if ($item.SkuId -notin $License.SkuId)
+        {
+            $removeLicenses.Add($item.SkuId)
+        }
     }
     $addLicenses = New-Object 'System.Collections.Generic.List[Microsoft.Open.AzureAD.Model.AssignedLicense]'
     foreach ($item in $License)
