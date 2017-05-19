@@ -450,8 +450,7 @@ function Connect-KBAOnpremMailbox
     {
         throw 'No disconnected mailbox exists for target'
     }
-    $disconnectedMailboxes = 
-        Get-OnpremMailboxDatabase | 
+    $disconnectedMailboxes = Get-OnpremMailboxDatabase | 
         Get-OnpremMailboxStatistics -Filter "LegacyDn -eq '$($user.LegacyExchangeDn)'" -NoADLookup | 
         Sort-Object -Property DisconnectDate -Descending
 
