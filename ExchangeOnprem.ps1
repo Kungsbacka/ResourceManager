@@ -301,7 +301,7 @@ function Enable-KBAOnpremMailbox
     {
         $database =
             Get-OnpremMailboxDatabase |
-            Where-Object -Property 'Name' -Like -Value 'S_DB*' |
+            where 'Name' -Like -Value 'S_DB*' |
             Get-Random
         $params.Database = $database.Name
     }
@@ -464,6 +464,56 @@ function Connect-KBAOnpremMailbox
         Force = $true
     }
     Connect-OnpremMailbox @param
+}
+
+function Cleanup-KBAOnpremMailbox
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $UserPrincipalName
+    )
+    $result = Test-KBAOnpremMailbox $UserPrincipalName
+    if ($result -ne [TestMailboxResult]::Onprem)
+    {
+        throw 'Target account has no on-prem mailbox'
+    }
+    $mailbox = Get-OnpremMailbox -Identity $UserPrincipalName
+    $addresses = $mailbox.EmailAddresses
+    $currentO365Address = $addresses | where {$_ -like "*@$($Script:Config.ExchangeOnprem.ExchangeOnlineMailDomain)"}
+    $correctO365Address = "smtp:$($mailbox.SamAccountName)@$($Script:Config.ExchangeOnprem.ExchangeOnlineMailDomain)"
+    if ($currentO365Address)
+    {
+        if ($currentO365Address -ne $correctO365Address)
+        {
+            $addresses = $addresses | where {$_ -ne $currentO365Address}
+            $addresses += $correctO365Address
+        }
+    }
+    else
+    {
+        $addresses += $correctO365Address
+    }
+    $alias = ''
+    foreach ($c in [char[]]($mailbox.Alias.Normalize('FormD')))
+    {
+        if ([System.Globalization.CharUnicodeInfo]::GetUnicodeCategory($c) -ne [System.Globalization.UnicodeCategory]::NonSpacingMark)
+        {
+            $alias += $c
+        }
+    }
+    $badSecondaryAddress = $addresses | where {$_ -clike "smtp:$alias@*"}
+    if ($badSecondaryAddress)
+    {
+        $addresses = $addresses | where {$_ -ne $badSecondaryAddress}
+    }
+    Set-OnpremMailbox -Identity $UserPrincipalName -EmailAddresses $addresses
+    if ($mailbox.Alias -ne $mailbox.SamAccountName)
+    {
+        # Alias did not change when i tried to set EmailAddress and Alias at the same time
+        Set-OnpremMailbox -Identity $UserPrincipalName -Alias $mailbox.SamAccountName
+    }
 }
 
 function Set-KBAOnpremMailboxAutoReplyState

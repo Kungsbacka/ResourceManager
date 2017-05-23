@@ -53,6 +53,12 @@
         Parameters = @()
         OptionalParameters = @()
     }
+    CleanupMailbox = @{
+        Command = 'Cleanup-KBAOnpremMailbox'
+        Initializer = 'Connect-KBAExchangeOnprem'
+        Parameters = @()
+        OptionalParameters = @()
+    }
     ConfigureMailboxAutoReplyTask = @{
         Command = 'Set-KBAOnpremMailboxAutoReplyState'
         Initializer = 'Connect-KBAExchangeOnprem'
