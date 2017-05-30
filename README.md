@@ -12,13 +12,3 @@ Just like Lifecycle Manager, Resource Manager is built specifically for Kungsbac
 Tasks are stored as JSON in attribute carLicense on each user object processed by Resource manager. This attribute was chosen
 because it's not indexed and replicated to neither Global Catalog nor Azure AD. [Kungsbacka.AccountTasks](https://github.com/Kungsbacka/Kungsbacka.AccountTasks)
 can be used to generate task JSON or parse task JSON into objects.
-
-I had to make a few workarounds to get the scripts to run in a scheduled task under a Group Managed Service Account (gMSA).
-Under these specific conditions the environment doesn't get properly initialized. Default modules are not loaded and 
-environment variables are not set properly. You can find more information in
-[this forum post](https://powershell.org/forums/topic/command-exist-and-does-not-exist-at-the-same-time/#post-58156) (powershell.org).
-
-Note: One "gMSA workaround" must be done manually before deploying the script. Connect-AzureAD writes its logs to
-%LOCALAPPDATA%\AzureAD\Powershell. If the environment it not properly initialied LOCALAPPDATA is going to point
-to the public AppData folder (C:\Users\Public\AppData\Local). Make sure this location exists and is writable by
-the gMSA. Alternatively you can create the subfolders and only give write permissions to the Powershell folder.
