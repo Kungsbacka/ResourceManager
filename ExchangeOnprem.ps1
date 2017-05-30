@@ -301,7 +301,7 @@ function Enable-KBAOnpremMailbox
     {
         $database =
             Get-OnpremMailboxDatabase |
-            where 'Name' -Like -Value 'S_DB*' |
+            Where-Object 'Name' -Like -Value 'S_DB*' |
             Get-Random
         $params.Database = $database.Name
     }
@@ -481,13 +481,13 @@ function Cleanup-KBAOnpremMailbox
     }
     $mailbox = Get-OnpremMailbox -Identity $UserPrincipalName
     $addresses = $mailbox.EmailAddresses
-    $currentO365Address = $addresses | where {$_ -like "*@$($Script:Config.ExchangeOnprem.ExchangeOnlineMailDomain)"}
+    $currentO365Address = $addresses | Where-Object {$_ -like "*@$($Script:Config.ExchangeOnprem.ExchangeOnlineMailDomain)"}
     $correctO365Address = "smtp:$($mailbox.SamAccountName)@$($Script:Config.ExchangeOnprem.ExchangeOnlineMailDomain)"
     if ($currentO365Address)
     {
         if ($currentO365Address -ne $correctO365Address)
         {
-            $addresses = $addresses | where {$_ -ne $currentO365Address}
+            $addresses = $addresses | Where-Object {$_ -ne $currentO365Address}
             $addresses += $correctO365Address
         }
     }
@@ -503,10 +503,10 @@ function Cleanup-KBAOnpremMailbox
             $alias += $c
         }
     }
-    $badSecondaryAddress = $addresses | where {$_ -clike "smtp:$alias@*"}
+    $badSecondaryAddress = $addresses | Where-Object {$_ -clike "smtp:$alias@*"}
     if ($badSecondaryAddress)
     {
-        $addresses = $addresses | where {$_ -ne $badSecondaryAddress}
+        $addresses = $addresses | Where-Object {$_ -ne $badSecondaryAddress}
     }
     Set-OnpremMailbox -Identity $UserPrincipalName -EmailAddresses $addresses
     if ($mailbox.Alias -ne $mailbox.SamAccountName)
