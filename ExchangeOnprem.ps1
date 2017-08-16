@@ -394,7 +394,7 @@ function Enable-KBAOnpremRemoteMailbox
     }
     if ($result -eq [TestMailboxResult]::Remote)
     {
-        throw 'Target alread has an remote mailbox'
+        throw 'Target alread has a remote mailbox'
     }
     $params = @{
         Identity = $UserPrincipalName
@@ -443,7 +443,7 @@ function Connect-KBAOnpremMailbox
     }
     if ($result -eq [TestMailboxResult]::Remote)
     {
-        throw 'Target alread has an remote mailbox'
+        throw 'Target alread has a remote mailbox'
     }
     $user = Get-ADUser -Identity $SamAccountName -Properties LegacyExchangeDn
     if (-not $user.LegacyExchangeDn)
@@ -460,6 +460,7 @@ function Connect-KBAOnpremMailbox
     }
     $param = @{
         Identity = $user.LegacyExchangeDn
+        User = $user.ObjectGUID.ToString()
         Database = $disconnectedMailboxes[0].Database.ToString()
         Force = $true
     }
