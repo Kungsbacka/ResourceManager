@@ -6,7 +6,6 @@ $Config = @{
     }
     HomeFolder = @{
         Domain = '<AD domain>'
-        StudentShare = '<Path to share>'
     }
     SamlId = @{
         Domain = '<Domain>'

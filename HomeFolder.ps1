@@ -32,21 +32,4 @@ function New-HomeFolder
     {
         throw "icacls failed ($LASTEXITCODE) to set owner on folder: $homeFolderPath"
     }
-    if ($homeFolderPath -like "$($Script:Config.HomeFolder.StudentShare)\*")
-    {
-        $param = @{
-            Identity = $SamAccountName
-            HomeDirectory = (Join-Path $homeFolderPath 'Documents')
-            HomeDrive = 'H:'
-        }
-    }
-    else
-    {
-        $param = @{
-            Identity = $SamAccountName
-            HomeDirectory = $null
-            HomeDrive = $null
-        }
-    }
-    Set-ADUser @param
 }
