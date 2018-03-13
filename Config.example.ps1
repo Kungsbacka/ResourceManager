@@ -19,8 +19,9 @@ $Config = @{
     }
     # Office 365 credentials for an account with user administration privileges.
     # Password must be encrypted with the same credentials that is running the script.
-    # Start a new PowerShell prompt as that user and run (Get-Credential).Password | ConvertFrom-SecureString
-    # to encrypt the password.
+    # Start a new PowerShell prompt as that user, run the following line
+    # (Get-Credential).Password | ConvertFrom-SecureString | Set-Clipboard
+    # and paste in the encrypted password.
     Office365 = @{
         MsolUser = '<Office 365 user with permissions to manage users>'
         MsolPassword = '<encrypted password>'

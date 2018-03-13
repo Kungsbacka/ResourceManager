@@ -286,11 +286,11 @@ function Enable-KBAOnpremMailbox
     $result = Test-KBAOnpremMailbox $UserPrincipalName
     if ($result -eq [TestMailboxResult]::Onprem)
     {
-        throw 'Target alread has an on-prem mailbox'
+        throw 'Target already has an on-prem mailbox'
     }
     if ($result -eq [TestMailboxResult]::Remote)
     {
-        throw 'Target alread has a remote mailbox'
+        throw 'Target already has a remote mailbox'
     }
     $params = @{
         Identity = $UserPrincipalName
@@ -390,11 +390,11 @@ function Enable-KBAOnpremRemoteMailbox
     $result = Test-KBAOnpremMailbox $UserPrincipalName
     if ($result -eq [TestMailboxResult]::Onprem)
     {
-        throw 'Target alread has an on-prem mailbox'
+        throw 'Target already has an on-prem mailbox'
     }
     if ($result -eq [TestMailboxResult]::Remote)
     {
-        throw 'Target alread has a remote mailbox'
+        throw 'Target already has a remote mailbox'
     }
     $params = @{
         Identity = $UserPrincipalName
@@ -439,11 +439,11 @@ function Connect-KBAOnpremMailbox
     $result = Test-KBAOnpremMailbox $UserPrincipalName
     if ($result -eq [TestMailboxResult]::Onprem)
     {
-        throw 'Target alread has an on-prem mailbox'
+        throw 'Target already has an on-prem mailbox'
     }
     if ($result -eq [TestMailboxResult]::Remote)
     {
-        throw 'Target alread has a remote mailbox'
+        throw 'Target already has a remote mailbox'
     }
     $user = Get-ADUser -Identity $SamAccountName -Properties LegacyExchangeDn
     if (-not $user.LegacyExchangeDn)
