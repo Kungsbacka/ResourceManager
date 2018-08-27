@@ -2,3 +2,4 @@
 *.dll
 .vscode
 Config.ps1
+Config.dev.ps1
