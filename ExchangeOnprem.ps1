@@ -481,7 +481,7 @@ function Cleanup-KBAOnpremMailbox
         throw 'Target account has no on-prem mailbox'
     }
     $mailbox = Get-OnpremMailbox -Identity $UserPrincipalName
-    $addresses = $mailbox.EmailAddresses
+    $addresses = @($mailbox.EmailAddresses)
     $currentO365Address = $addresses | Where-Object {$_ -like "*@$($Script:Config.ExchangeOnprem.ExchangeOnlineMailDomain)"}
     $correctO365Address = "smtp:$($mailbox.SamAccountName)@$($Script:Config.ExchangeOnprem.ExchangeOnlineMailDomain)"
     if ($currentO365Address)
