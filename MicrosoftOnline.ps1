@@ -1,6 +1,5 @@
 ﻿# Make all error terminating errors
 $Global:ErrorActionPreference = 'Stop'
-. "$PSScriptRoot\Config.ps1"
 
 function Connect-KBAAzureAD
 {
