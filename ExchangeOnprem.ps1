@@ -480,21 +480,8 @@ function Cleanup-KBAOnpremMailbox
         throw 'Target account has no on-prem mailbox'
     }
     $mailbox = Get-OnpremMailbox -Identity $UserPrincipalName
-    $addresses = @($mailbox.EmailAddresses)
-    $currentO365Address = $addresses | Where-Object {$_ -like "*@$($Script:Config.ExchangeOnprem.ExchangeOnlineMailDomain)"}
-    $correctO365Address = "smtp:$($mailbox.SamAccountName)@$($Script:Config.ExchangeOnprem.ExchangeOnlineMailDomain)"
-    if ($currentO365Address)
-    {
-        if ($currentO365Address -ne $correctO365Address)
-        {
-            $addresses = $addresses | Where-Object {$_ -ne $currentO365Address}
-            $addresses += $correctO365Address
-        }
-    }
-    else
-    {
-        $addresses += $correctO365Address
-    }
+    $addresses = New-Object -TypeName 'System.Collections.ArrayList'
+    [void]$addresses.AddRange($mailbox.EmailAddresses)
     $alias = ''
     foreach ($c in [char[]]($mailbox.Alias.Normalize('FormD')))
     {
@@ -503,10 +490,25 @@ function Cleanup-KBAOnpremMailbox
             $alias += $c
         }
     }
-    $badSecondaryAddress = $addresses | Where-Object {$_ -clike "smtp:$alias@*"}
-    if ($badSecondaryAddress)
+    $badAddresses = @()
+    $badAddresses += $addresses | Where-Object {$_ -CMatch "smtp:$alias@(elev\.)*kungsbacka\.se"}
+    $badAddresses += $addresses | Where-Object {$_ -Like '*@kba.local'}
+    $badAddresses | ForEach-Object -Process {
+        $addresses.Remove($_)
+    }
+    $currentO365Address = $addresses | Where-Object {$_ -like "*@$($Script:Config.ExchangeOnprem.ExchangeOnlineMailDomain)"}
+    $correctO365Address = "smtp:$($mailbox.SamAccountName)@$($Script:Config.ExchangeOnprem.ExchangeOnlineMailDomain)"
+    if ($currentO365Address)
     {
-        $addresses = $addresses | Where-Object {$_ -ne $badSecondaryAddress}
+        if ($currentO365Address -ne $correctO365Address)
+        {
+            $addresses.Remove($currentO365Address)
+            [void]$addresses.Add($correctO365Address)
+        }
+    }
+    else
+    {
+        [void]$addresses.Add($correctO365Address)
     }
     Set-OnpremMailbox -Identity $UserPrincipalName -EmailAddresses $addresses
     if ($mailbox.Alias -ne $mailbox.SamAccountName)
