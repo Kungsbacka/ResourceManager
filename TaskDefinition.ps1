@@ -71,6 +71,12 @@
         Parameters = @('Type')
         OptionalParameters = @()
     }
+    ConfigureOnlineMailbox = @{
+        Command = 'Set-KBAOnlineMailbox'
+        Initializer = 'Connect-KBAExchangeOnline'
+        Parameters = @('Type')
+        OptionalParameters = @()
+    }
     ConfigureOnlineOwa = @{
         Command = 'Set-KBAOnlineOwa'
         Initializer = 'Connect-KBAExchangeOnline'
@@ -112,6 +118,13 @@
         Initializer = 'Connect-KBAAzureAD'
         Parameters = @()
         OptionalParameters = @()
+    }
+    MsolLicenseGroup = @{
+        Command = 'Set-LicenseGroupMembership'
+        Initializer = $null
+        Parameters = @('LicenseGroups')
+        OptionalParameters = @()
+        
     }
     EnableCSUser = @{
         Command = 'Enable-KBAOnpremCSUser'

@@ -370,6 +370,7 @@ function Set-KBAOnpremRemoteMailbox
         $params = @{
             Identity = $UserPrincipalName
             EmailAddresses = @{'Add' = $rra}
+            EmailAddressPolicyEnabled = $false
         }
         Set-OnpremRemoteMailbox @params
     }
@@ -453,7 +454,7 @@ function Connect-KBAOnpremMailbox
         Get-OnpremMailboxStatistics -Filter "LegacyDn -eq '$($user.LegacyExchangeDn)'" -NoADLookup | 
         Sort-Object -Property DisconnectDate -Descending
 
-    if ($disconnectedMailboxes.Count -eq 0 -or $disconnectedMailboxes[0].DisconnectDate -eq $null)
+    if ($disconnectedMailboxes.Count -eq 0 -or $null -eq $disconnectedMailboxes[0].DisconnectDate)
     {
         throw 'No disconnected mailbox exists for target'
     }

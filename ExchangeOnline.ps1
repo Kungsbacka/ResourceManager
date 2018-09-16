@@ -32,6 +32,7 @@ function Connect-KBAExchangeOnline
         DisableNameChecking = $true
         CommandName = @(
             'Get-Mailbox'
+            'Set-Mailbox'
             'Set-MailboxRegionalConfiguration'
         )
     }
@@ -85,4 +86,40 @@ function Set-KBAOnlineOwa
         Language = 'sv-SE'
     }
     Set-OnlineMailboxRegionalConfiguration @params
+}
+
+function Set-KBAOnlineMailbox
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $UserPrincipalName,
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [ValidateSet('Employee', 'Faculty', 'Student', 'Shared')]
+        [string]
+        $Type
+    )
+    $result = Test-KBAOnlineMailbox $UserPrincipalName
+    if ($result -ne [TestMailboxResult]::Online)
+    {
+        throw 'Target account has no Office 365 mailbox'
+    }
+    $params = @{
+        EmailAddressPolicyEnabled = $false
+        Languages = 'sv-SE'
+    }
+    if ($Type -eq 'Employee' -or $Type -eq 'Shared')
+    {
+        $params.RetentionPolicy = 'Personal Retention Policy'
+        $params.AddressBookPolicy = 'ABP-ADM'
+    }
+    elseif ($Type -eq 'Faculty')
+    {
+        $params.RetentionPolicy = 'Personal Retention Policy'
+    }
+    else # Student
+    {
+        $params.AddressBookPolicy = 'ABP-Skola'
+    }
 }

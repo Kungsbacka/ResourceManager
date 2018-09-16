@@ -25,7 +25,7 @@ function Enable-KBAMsolSync
         Properties = @('ExtensionAttribute11')
     }
     $user = Get-ADUser @params
-    if ($user.ExtensionAttribute11 -eq $null)
+    if ($null -eq $user.ExtensionAttribute11)
     {
         $params = @{
             Identity = $Identity
@@ -115,11 +115,107 @@ function Restore-KBAMsolUserLicense
         $SamAccountName
     )
     $adUser = Get-ADUser -Identity $SamAccountName -Properties @('ExtensionAttribute1')
-    if ($adUser.ExtensionAttribute1 -eq $null)
+    if ($null -eq $adUser.ExtensionAttribute1)
     {
         throw 'No stashed license exists in extensionAttribute1'
     }
     $license = $adUser.ExtensionAttribute1 | ConvertFrom-Json
     Set-KBAMsolUserLicense -UserPrincipalName $UserPrincipalName -License $license
     Set-ADUser -Identity $SamAccountName -Clear 'ExtensionAttribute1'
+}
+
+function Set-LicenseGroupMembership
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $SamAccountName,
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string[]]
+        $LicenseGroups
+    )
+    function ParseGroup($group)
+    {
+        $json = $group.Location.Substring(8)
+        $obj = ConvertFrom-Json -InputObject $json
+        Add-Member -InputObject $obj -NotePropertyName 'Guid' -NotePropertyValue $group.ObjectGUID
+        Add-Member -InputObject $obj -NotePropertyName 'Dn' -NotePropertyValue $group.DistinguishedName
+        $obj
+    }
+    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('MemberOf','ExtensionAttribute11')
+    if ($null -eq $adUser.ExtensionAttribute11)
+    {
+        throw 'User is not synced to AzureAD'
+    }
+    $allLicenseGroups = Get-ADGroup -Filter "Location -like 'license:*'" -Properties @('Location')
+    $guidHash = @{}
+    $dnHash = @{}
+    foreach ($group in $allLicenseGroups)
+    {
+        $parsedGroup = ParseGroup $group
+        $guidHash.Add($group.ObjectGUID.ToString(), $parsedGroup)
+        $dnHash.Add($group.DistinguishedName, $parsedGroup)
+    }
+    $currentMemberships = @()
+    foreach ($dn in $adUser.MemberOf)
+    {
+        $group = $dnHash[$dn]
+        if ($null -ne $group)
+        {
+            $currentMemberships += $group
+        }
+    }
+    $addTo = @()
+    $removeFrom = @()
+    $categories = @{}
+    foreach ($groupGuid in $LicenseGroups)
+    {
+        $group = $guidHash[$groupGuid] 
+        if ($null -eq $group)
+        {
+            throw 'Unknown license group'
+        }
+        if ($categories[$group.Category])
+        {
+            throw 'Cannot add a user to more than one group in each category'
+        }
+        else
+        {
+            $categories[$group.Category] = $true
+        }
+        if ($group.Dynamic)
+        {
+            throw 'Cannot add a user to an Dynamic License Group'
+        }
+        foreach ($memberGroup in $currentMemberships)
+        {
+            if ($memberGroup.Category -eq $group.Category)
+            {
+                if ($memberGroup.Dynamic)
+                {
+                    throw 'User is member of an Dynamic License Group'
+                }
+                $removeFrom += $memberGroup
+            }
+        }
+        $addTo += $group
+    }
+    if (Compare-Object -ReferenceObject $addTo -DifferenceObject $removeFrom -Property 'Guid')
+    {
+        if ($removeFrom.Count -gt 0)
+        {
+            foreach ($group in $removeFrom)
+            {
+                Remove-ADGroupMember -Identity $group.Dn -Members $adUser.DistinguishedName -Confirm:$false
+            }
+        }
+        if ($addTo.Count -gt 0)
+        {
+            foreach ($group in $addTo)
+            {
+                Add-ADGroupMember -Identity $group.Dn -Members $adUser.DistinguishedName
+            }
+        }
+    }
 }
