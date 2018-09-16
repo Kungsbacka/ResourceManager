@@ -26,6 +26,23 @@ $Config = @{
         MsolUser = '<Office 365 user with permissions to manage users>'
         MsolPassword = '<encrypted password>'
     }
+    ExchangeOnline = @{
+        Mailbox = @{
+            EmailAddressPolicyEnabled = $false
+            RetentionPolicy = '<Policy name>'
+            AddressBookPolicy = '<Policy name>'
+            Languages = @('sv-SE')
+            Student = @{
+                AddressBookPolicy = '<Policy name>'
+            }
+        }
+        Owa = @{
+            DateFormat = 'yyyy-MM-dd'
+            TimeFormat = 'HH:mm'
+            TimeZone = 'W. Europe Standard Time'
+            Language = 'sv-SE'
+        }
+    }
     ExchangeOnprem = @{
         Servers = @(
             '<server1>'

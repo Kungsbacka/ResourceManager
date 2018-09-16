@@ -80,10 +80,10 @@ function Set-KBAOnlineOwa
     }
     $params = @{
         Identity = $UserPrincipalName
-        DateFormat = 'yyyy-MM-dd'
-        TimeFormat = 'HH:mm'
-        TimeZone = 'W. Europe Standard Time'
-        Language = 'sv-SE'
+        DateFormat = $Script:Config.ExchangeOnline.Owa.DateFormat
+        TimeFormat = $Script:Config.ExchangeOnline.Owa.TimeFormat
+        TimeZone = $Script:Config.ExchangeOnline.Owa.TimeZone
+        Language = $Script:Config.ExchangeOnline.Owa.Language
     }
     Set-OnlineMailboxRegionalConfiguration @params
 }
@@ -107,19 +107,19 @@ function Set-KBAOnlineMailbox
     }
     $params = @{
         EmailAddressPolicyEnabled = $false
-        Languages = 'sv-SE'
+        Languages = $Script:Config.ExchangeOnline.Mailbox.Languages
     }
     if ($Type -eq 'Employee' -or $Type -eq 'Shared')
     {
-        $params.RetentionPolicy = 'Personal Retention Policy'
-        $params.AddressBookPolicy = 'ABP-ADM'
+        $params.RetentionPolicy = $Script:Config.ExchangeOnline.Mailbox.RetentionPolicy
+        $params.AddressBookPolicy = $Script:Config.ExchangeOnline.Mailbox.AddressBookPolicy
     }
     elseif ($Type -eq 'Faculty')
     {
-        $params.RetentionPolicy = 'Personal Retention Policy'
+        $params.RetentionPolicy = $Script:Config.ExchangeOnline.Mailbox.RetentionPolicy
     }
     else # Student
     {
-        $params.AddressBookPolicy = 'ABP-Skola'
+        $params.AddressBookPolicy = $Script:Config.ExchangeOnline.Mailbox.Student.AddressBookPolicy
     }
 }
