@@ -6,8 +6,9 @@ Enum TestMailboxResult
     None
     Onprem
     Remote
+    OnpremAndRemote
+    OnpremDisabled
     Online
-    Both
 }
 
 function Connect-KBAExchangeOnline

@@ -6,8 +6,9 @@ Enum TestMailboxResult
     None
     Onprem
     Remote
+    OnpremAndRemote
+    OnpremDisabled
     Online
-    Both
 }
 
 function Connect-KBAExchangeOnprem
@@ -95,7 +96,7 @@ function Test-KBAOnpremMailbox
             }
             else
             {
-                $result = [TestMailboxResult]::Both
+                $result = [TestMailboxResult]::OnpremAndRemote
             }
         }
     }
@@ -104,6 +105,14 @@ function Test-KBAOnpremMailbox
         if ($_.CategoryInfo.Reason -ne 'ManagementObjectNotFoundException')
         {
             throw
+        }
+    }
+    if ($result -eq [TestMailboxResult]::None)
+    {
+        $adUser = Get-ADUser -Filter "UserPrincipalName -eq '$UserPrincipalName' -and LegacyExchangeDn -like '*' -and MsExchPreviousRecipientTypeDetails -like '*'"
+        if ($adUser)
+        {
+            $result = [TestMailboxResult]::OnpremDisabled
         }
     }
     $result
@@ -395,6 +404,10 @@ function Enable-KBAOnpremRemoteMailbox
     if ($result -eq [TestMailboxResult]::Remote)
     {
         throw 'Target already has a remote mailbox'
+    }
+    if ($result -eq [TestMailboxResult]::OnpremDisabled)
+    {
+        throw 'Target has a disabled mailbox on-prem'
     }
     $params = @{
         Identity = $UserPrincipalName

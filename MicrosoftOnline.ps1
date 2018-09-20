@@ -133,7 +133,10 @@ function Set-LicenseGroupMembership
         $SamAccountName,
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
         [string[]]
-        $LicenseGroups
+        $LicenseGroups,
+        [Parameter(Mandatory=$false,ValueFromPipelineByPropertyName=$true)]
+        [bool]
+        $SkipSyncCheck = $false
     )
     function ParseGroup($group)
     {
@@ -144,7 +147,7 @@ function Set-LicenseGroupMembership
         $obj
     }
     $adUser = Get-ADUser -Identity $SamAccountName -Properties @('MemberOf','ExtensionAttribute11')
-    if ($null -eq $adUser.ExtensionAttribute11)
+    if (-not $SkipSyncCheck -and $null -eq $adUser.ExtensionAttribute11)
     {
         throw 'User is not synced to AzureAD'
     }
