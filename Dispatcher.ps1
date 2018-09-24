@@ -37,21 +37,13 @@ function Start-Task
     )
     process
     {
-        if ($SequenceTask -eq $null)
-        {
-            $taskId = $Task.Id
-        }
-        else
-        {
-            $taskId = $SequenceTask.Id
-        }
         # Do we know how to do this task?
         if (-not $Script:TaskDefinitions.ContainsKey($Task.TaskName))
         {
             throw "Unknown task: $($Task.Name)"
         }
         # Do we need to wait?
-        if ($Task.WaitUntil -ne $null)
+        if ($null -ne $Task.WaitUntil)
         {
             $waitUntil = Get-Date -Date $Task.WaitUntil
             if ((Get-Date) -lt $waitUntil)
@@ -63,15 +55,15 @@ function Start-Task
         # Add any parameters as properties on the Target object if they don't exist.
         foreach ($paramName in $Script:TaskDefinitions[$Task.TaskName].Parameters)
         {
-            if ($Target.$paramName -ne $null)
+            if ($null -ne $Target.$paramName)
             {
                 continue
             }
-            if ($Task.$paramName -ne $null)
+            if ($null -ne $Task.$paramName)
             {
                 $paramValue = $Task.$paramName
             }
-            elseif ($SequenceTask -ne $null -and $SequenceTask.$paramName -ne $null)
+            elseif ($null -ne $SequenceTask -and $null -ne $SequenceTask.$paramName)
             {
                 $paramValue = $SequenceTask.$paramName
             }
@@ -89,15 +81,15 @@ function Start-Task
         # Add any optional parameters as properties on the Target object if they don't exist.
         foreach ($paramName in $Script:TaskDefinitions[$Task.TaskName].OptionalParameters)
         {
-            if ($Target.$paramName -ne $null)
+            if ($null -ne $Target.$paramName)
             {
                 continue
             }
-            if ($Task.$paramName -ne $null)
+            if ($null -ne $Task.$paramName)
             {
                 $paramValue = $Task.$paramName
             }
-            elseif ($SequenceTask -ne $null -and $SequenceTask.$paramName -ne $null)
+            elseif ($null -ne $SequenceTask -and $null -ne $SequenceTask.$paramName)
             {
                 $paramValue = $SequenceTask.$paramName
             }
@@ -114,7 +106,7 @@ function Start-Task
         }
         if ($Task.TaskName -eq 'Wait')
         {
-            if ($Task.WaitUntil -eq $null)
+            if ($null -eq $Task.WaitUntil)
             {
                 $params = @{
                     InputObject = $Task
@@ -132,7 +124,7 @@ function Start-Task
         }
         # Execute initializer if needed
         $initializer = $Script:TaskDefinitions[$Task.TaskName].Initializer
-        if ($initializer -ne $null -and $initializer -notin $Script:ExecutedInitializers)
+        if ($null -ne $initializer -and $initializer -notin $Script:ExecutedInitializers)
         {
             &$initializer
             $Script:ExecutedInitializers += $initializer
@@ -208,8 +200,8 @@ foreach ($user in $users)
                 exit        
             }
         }
-        $isSequenceTask = ($currentTask.Tasks -ne $null -and $currentTask.Tasks.Count -gt 0)
-        if ($currentTask.Id -eq $null)
+        $isSequenceTask = ($null -ne $currentTask.Tasks -and $currentTask.Tasks.Count -gt 0)
+        if ($null -eq $currentTask.Id)
         {
             $taskId = New-TaskLogEntry -Task $currentTask.TaskName -Target $user.UserPrincipalName
             $params = @{
@@ -284,13 +276,13 @@ foreach ($user in $users)
     try
     {
         $user2 = Get-ADUser -Filter "ObjectGuid -eq '$($user.Identity)'" -Properties 'CarLicense'
-        if ($user2 -eq $null)
+        if ($null -eq $user2)
         {
             exit
         }
         if ($remainingTasks.Count -gt 0)
         {
-            if ($user2.CarLicense -ne $null)
+            if ($null -ne $user2.CarLicense)
             {
                 $json = ConvertTo-Json -InputObject $remainingTasks -Depth 4 -Compress
                 Set-ADUser -Identity $user.Identity -Replace @{'CarLicense'=$json}
