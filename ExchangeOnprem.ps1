@@ -126,7 +126,7 @@ function Set-KBAOnpremOwa
         [string]
         $UserPrincipalName,
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [ValidateSet('Employee', 'Student', 'Shared')]
+        [ValidateSet('Employee', 'Faculty', 'Student', 'Shared')]
         [string]
         $Type
     )
@@ -142,7 +142,7 @@ function Set-KBAOnpremOwa
     {
         $params.OwaMailboxPolicy = $Script:Config.ExchangeOnprem.Owa.Student.OwaMailboxPolicy
     }
-    else # Employee or Shared
+    else # Employee, Faculty or Shared
     {
         $params.OwaMailboxPolicy = $Script:Config.ExchangeOnprem.Owa.OwaMailboxPolicy
     }
@@ -166,7 +166,7 @@ function Set-KBAOnpremCalendar
         [string]
         $UserPrincipalName,
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [ValidateSet('Employee', 'Student', 'Shared')]
+        [ValidateSet('Employee', 'Faculty', 'Student', 'Shared')]
         [string]
         $Type
     )
@@ -211,7 +211,7 @@ function Set-KBAOnpremCalendar
         $params.WorkingHoursEndTime = $Script:Config.ExchangeOnprem.Calendar.WorkingHoursEndTime
     }
     Set-OnpremMailboxCalendarConfiguration @params
-    if ($Type -in 'Employee', 'Shared')
+    if ($Type -in 'Employee', 'Faculty', 'Shared')
     {
         foreach($calendarIdentity in $calendarIdentities)
         {
@@ -236,7 +236,7 @@ function Set-KBAOnpremMailbox
         [string]
         $UserPrincipalName,
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [ValidateSet('Employee', 'Student', 'Shared')]
+        [ValidateSet('Employee', 'Faculty', 'Student', 'Shared')]
         [string]
         $Type
     )
@@ -259,7 +259,7 @@ function Set-KBAOnpremMailbox
             UseDatabaseQuotaDefaults = $Script:Config.ExchangeOnprem.Mailbox.UseDatabaseQuotaDefaults
         }
     }
-    else # Employee or Shared
+    else # Employee, Faculty or Shared
     {
         $params = @{
             Identity = $UserPrincipalName
@@ -287,7 +287,7 @@ function Enable-KBAOnpremMailbox
         [string]
         $SamAccountName,
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [ValidateSet('Employee', 'Student', 'Shared')]
+        [ValidateSet('Employee', 'Faculty', 'Student', 'Shared')]
         [string]
         $Type
     )
@@ -338,7 +338,7 @@ function Enable-KBAOnpremMailbox
             UseDatabaseQuotaDefaults = $Script:Config.ExchangeOnprem.Mailbox.UseDatabaseQuotaDefaults
         }
     }
-    else # Employee or Shared
+    else # Employee, Faculty or Shared
     {
         $params = @{
             Identity = $UserPrincipalName
@@ -589,11 +589,11 @@ function Send-KBAOnpremWelcomeMail
         [string]
         $UserPrincipalName,
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [ValidateSet('Employee', 'Student', 'Shared')]
+        [ValidateSet('Employee', 'Faculty', 'Student', 'Shared')]
         [string]
         $Type
     )
-    if ($Type -ne 'Employee')
+    if ($Type -notin 'Employee', 'Faculty')
     {
         throw 'Wrong mailbox type. Welcome mail is only sent to employees.'
     }

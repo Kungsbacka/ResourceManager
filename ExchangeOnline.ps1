@@ -107,7 +107,7 @@ function Set-KBAOnlineMailbox
         throw 'Target account has no Office 365 mailbox'
     }
     $params = @{
-        EmailAddressPolicyEnabled = $false
+        Identity = $UserPrincipalName
         Languages = $Script:Config.ExchangeOnline.Mailbox.Languages
     }
     if ($Type -eq 'Employee' -or $Type -eq 'Shared')
@@ -123,4 +123,5 @@ function Set-KBAOnlineMailbox
     {
         $params.AddressBookPolicy = $Script:Config.ExchangeOnline.Mailbox.Student.AddressBookPolicy
     }
+    Set-OnlineMailbox @params
 }
