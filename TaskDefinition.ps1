@@ -123,7 +123,7 @@
         Command = 'Set-LicenseGroupMembership'
         Initializer = $null
         Parameters = @('LicenseGroups')
-        OptionalParameters = @('SkipSyncCheck')
+        OptionalParameters = @('SkipSyncCheck','SkipDynamicGroupCheck')
         
     }
     EnableCSUser = @{

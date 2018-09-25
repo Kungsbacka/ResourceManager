@@ -136,7 +136,10 @@ function Set-LicenseGroupMembership
         $LicenseGroups,
         [Parameter(Mandatory=$false,ValueFromPipelineByPropertyName=$true)]
         [bool]
-        $SkipSyncCheck = $false
+        $SkipSyncCheck = $false,
+        [Parameter(Mandatory=$false,ValueFromPipelineByPropertyName=$true)]
+        [bool]
+        $SkipDynamicGroupCheck = $false
     )
     function ParseGroup($group)
     {
@@ -160,13 +163,13 @@ function Set-LicenseGroupMembership
         $guidHash.Add($group.ObjectGUID.ToString(), $parsedGroup)
         $dnHash.Add($group.DistinguishedName, $parsedGroup)
     }
-    $currentMemberships = @()
+    $currentMemberships = @{}
     foreach ($dn in $adUser.MemberOf)
     {
         $group = $dnHash[$dn]
         if ($null -ne $group)
         {
-            $currentMemberships += $group
+            $currentMemberships.Add($group.Guid, $group)
         }
     }
     $addTo = @()
@@ -181,23 +184,27 @@ function Set-LicenseGroupMembership
         }
         if ($categories[$group.Category])
         {
-            throw 'Cannot add a user to more than one group in each category'
+            throw 'Cannot add a user to more than one license group in each category'
         }
         else
         {
             $categories[$group.Category] = $true
         }
-        if ($group.Dynamic)
+        if ($group.Dynamic -and -not $SkipDynamicGroupCheck)
         {
-            throw 'Cannot add a user to an Dynamic License Group'
+            throw 'Cannot add a user to a dynamic license group'
         }
-        foreach ($memberGroup in $currentMemberships)
+        if ($currentMemberships.ContainsKey($group.Guid))
+        {
+            continue
+        }
+        foreach ($memberGroup in $currentMemberships.Values)
         {
             if ($memberGroup.Category -eq $group.Category)
             {
                 if ($memberGroup.Dynamic)
                 {
-                    throw 'User is member of an Dynamic License Group'
+                    throw 'Cannot remove a user from a dynamic license group'
                 }
                 $removeFrom += $memberGroup
             }
