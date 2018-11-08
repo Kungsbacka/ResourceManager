@@ -109,7 +109,7 @@ function Test-KBAOnpremMailbox
     }
     if ($result -eq [TestMailboxResult]::None)
     {
-        $adUser = Get-ADUser -Filter "UserPrincipalName -eq '$UserPrincipalName' -and LegacyExchangeDn -like '*' -and MsExchPreviousRecipientTypeDetails -like '*'"
+        $adUser = Get-ADUser -Filter "UserPrincipalName -eq '$UserPrincipalName' -and LegacyExchangeDn -like '*' -and MsExchPreviousRecipientTypeDetails -like '*' -and MsExchRecipientTypeDetails -notlike '*' -and msExchRemoteRecipientType -notlike '*'"
         if ($adUser)
         {
             $result = [TestMailboxResult]::OnpremDisabled
@@ -407,7 +407,25 @@ function Enable-KBAOnpremRemoteMailbox
     }
     if ($result -eq [TestMailboxResult]::OnpremDisabled)
     {
-        throw 'Target has a disabled mailbox on-prem'
+        $attrib = @(
+            'ProxyAddresses'
+            'LegacyExchangeDn'
+            'MsExchPreviousRecipientTypeDetails'
+            'MsExchRecipientSoftDeletedStatus'
+            'MsExchUMDtmfMap'
+            'MsExchUsageLocation'
+            'MsExchWhenMailboxCreated'
+            'MsRTCSIP-DeploymentLocator'
+            'MsRTCSIP-FederationEnabled'
+            'MsRTCSIP-InternetAccessEnabled'
+            'MsRTCSIP-OptionFlags'
+            'MsRTCSIP-PrimaryHomeServer'
+            'MsRTCSIP-PrimaryUserAddress'
+            'MsRTCSIP-UserEnabled'
+            'MsRTCSIP-UserPolicies'
+            'MsRTCSIP-UserRoutingGroupId'
+        )
+        Set-ADUser -Identity $SamAccountName -Clear $attrib
     }
     $params = @{
         Identity = $UserPrincipalName

@@ -11,6 +11,36 @@ function Connect-KBAAzureAD
     Connect-AzureAD -Credential $credential -LogLevel None | Out-Null
 }
 
+function Update-LicenseGroupCache
+{
+    function ParseGroup($group)
+    {
+        $json = $group.Location.Substring(8)
+        $obj = ConvertFrom-Json -InputObject $json
+        Add-Member -InputObject $obj -NotePropertyName 'Guid' -NotePropertyValue $group.ObjectGUID
+        Add-Member -InputObject $obj -NotePropertyName 'Dn' -NotePropertyValue $group.DistinguishedName
+        $obj
+    }
+
+    if ($Script:LicenseGroupCache)
+    {
+        return
+    }
+    $Script:LicenseGroupCache = @{
+        GroupsByGuid = @{}
+        GroupsByDn = @{}
+    }
+    $licenseGroups = Get-ADGroup -Filter "Location -like 'license:*'" -Properties @('Location')
+    foreach ($group in $licenseGroups)
+    {
+        $metadata = ConvertFrom-Json -InputObject $group.Location.Substring(8)
+        Add-Member -InputObject $metadata -NotePropertyName 'Guid' -NotePropertyValue $group.ObjectGUID
+        Add-Member -InputObject $metadata -NotePropertyName 'Dn' -NotePropertyValue $group.DistinguishedName
+        $Script:LicenseGroupCache.GroupsByGuid.Add($group.ObjectGUID.ToString(), $metadata)
+        $Script:LicenseGroupCache.GroupsByDn.Add($group.DistinguishedName, $metadata)
+    }
+}
+
 function Enable-KBAMsolSync
 {
     param
@@ -135,38 +165,21 @@ function Set-LicenseGroupMembership
         [string[]]
         $LicenseGroups,
         [Parameter(Mandatory=$false,ValueFromPipelineByPropertyName=$true)]
-        [bool]
-        $SkipSyncCheck = $false,
+        [switch]
+        $SkipSyncCheck,
         [Parameter(Mandatory=$false,ValueFromPipelineByPropertyName=$true)]
-        [bool]
-        $SkipDynamicGroupCheck = $false
+        [switch]
+        $SkipDynamicGroupCheck
     )
-    function ParseGroup($group)
-    {
-        $json = $group.Location.Substring(8)
-        $obj = ConvertFrom-Json -InputObject $json
-        Add-Member -InputObject $obj -NotePropertyName 'Guid' -NotePropertyValue $group.ObjectGUID
-        Add-Member -InputObject $obj -NotePropertyName 'Dn' -NotePropertyValue $group.DistinguishedName
-        $obj
-    }
     $adUser = Get-ADUser -Identity $SamAccountName -Properties @('MemberOf','ExtensionAttribute11')
     if (-not $SkipSyncCheck -and $null -eq $adUser.ExtensionAttribute11)
     {
         throw 'User is not synced to AzureAD'
     }
-    $allLicenseGroups = Get-ADGroup -Filter "Location -like 'license:*'" -Properties @('Location')
-    $guidHash = @{}
-    $dnHash = @{}
-    foreach ($group in $allLicenseGroups)
-    {
-        $parsedGroup = ParseGroup $group
-        $guidHash.Add($group.ObjectGUID.ToString(), $parsedGroup)
-        $dnHash.Add($group.DistinguishedName, $parsedGroup)
-    }
     $currentMemberships = @{}
     foreach ($dn in $adUser.MemberOf)
     {
-        $group = $dnHash[$dn]
+        $group = $Script:LicenseGroupCache.GroupsByDn[$dn]
         if ($null -ne $group)
         {
             $currentMemberships.Add($group.Guid, $group)
@@ -177,7 +190,7 @@ function Set-LicenseGroupMembership
     $categories = @{}
     foreach ($groupGuid in $LicenseGroups)
     {
-        $group = $guidHash[$groupGuid] 
+        $group = $Script:LicenseGroupCache.GroupsByGuid[$groupGuid] 
         if ($null -eq $group)
         {
             throw 'Unknown license group'
@@ -228,4 +241,118 @@ function Set-LicenseGroupMembership
             }
         }
     }
+}
+
+function Remove-LicenseGroupMembership
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $SamAccountName,
+        [Parameter(Mandatory=$true,ParameterSetName='NamedGroups',ValueFromPipelineByPropertyName=$true)]
+        [string[]]
+        $LicenseGroups,
+        [Parameter(Mandatory=$true,ParameterSetName='AllGroups',ValueFromPipelineByPropertyName=$true)]
+        [switch]
+        $All,
+        [Parameter(Mandatory=$false,ParameterSetName='NamedGroups',ValueFromPipelineByPropertyName=$true)]
+        [switch]
+        $SkipBaseLicenseCheck,
+        [Parameter(Mandatory=$false,ParameterSetName='AllGroups',ValueFromPipelineByPropertyName=$true)]
+        [switch]
+        $SkipStashLicense
+    )
+    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('MemberOf')
+    $currentMemberships = @{}
+    foreach ($dn in $adUser.MemberOf)
+    {
+        $group = $Script:LicenseGroupCache.GroupsByDn[$dn]
+        if ($null -ne $group)
+        {
+            $currentMemberships.Add($group.Guid, $group)
+        }
+    }
+    if ($currentMemberships.Count -eq 0)
+    {
+        return
+    }
+    if ($All)
+    {
+        $removeFrom = $currentMemberships.Values
+    }
+    else
+    {
+        $removeFrom = @()
+        foreach ($groupGuid in $LicenseGroups)
+        {
+            $currentMemberships.Remove($groupGuid)
+            $group = $Script:LicenseGroupCache.GroupsByGuid[$groupGuid] 
+            if ($null -eq $group)
+            {
+                throw 'Unknown license group'
+            }
+            $removeFrom += $group                
+        }
+    }
+    if ($removeFrom.Count -eq 0)
+    {
+        return
+    }
+    if ($All)
+    {
+        if (-not $SkipStashLicense)
+        {
+            $serializedLicenses = $removeFrom.Guid -join ','
+            Set-ADUser -Identity $SamAccountName -Add @{'msDS-CloudExtensionAttribute1'=$serializedLicenses}
+        }
+    }
+    else
+    {
+        if (-not $SkipBaseLicenseCheck)
+        {
+            $baseLicensePresent = $false
+            foreach ($group in $currentMemberships)
+            {
+                if ($group.category -eq 'A')
+                {
+                    $baseLicensePresent = $true
+                    break
+                }
+            }
+            if (-not $baseLicensePresent)
+            {
+                throw 'Removing licenses would leave user without a base license. Use SkipBaseLicenseCheck to force removal.'
+            }
+        }
+    }
+    foreach ($group in $removeFrom)
+    {
+        Remove-ADGroupMember -Identity $group.Dn -Members $adUser.DistinguishedName -Confirm:$false
+    }
+}
+
+function Restore-LicenseGroupMembership
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $SamAccountName,
+        [Parameter(Mandatory=$false,ValueFromPipelineByPropertyName=$true)]
+        [switch]
+        $SkipSyncCheck
+    )
+    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('msDS-CloudExtensionAttribute1','ExtensionAttribute11')
+    if (-not $SkipSyncCheck -and $null -eq $adUser.ExtensionAttribute11)
+    {
+        throw 'User is not synced to AzureAD'
+    }
+    if ($null -eq $adUser.'msDS-CloudExtensionAttribute1')
+    {
+        throw 'User has no stashed licenses in msDS-CloudExtensionAttribute1'
+    }
+    $deserializedLicenses = $adUser.'msDS-CloudExtensionAttribute1' -split ','
+    Set-LicenseGroupMembership -SamAccountName $SamAccountName -LicenseGroups $deserializedLicenses -SkipDynamicGroupCheck
+    Set-ADUser -Identity $SamAccountName -Clear 'msDS-CloudExtensionAttribute1'
 }

@@ -121,10 +121,21 @@
     }
     MsolLicenseGroup = @{
         Command = 'Set-LicenseGroupMembership'
-        Initializer = $null
+        Initializer = 'Update-LicenseGroupCache'
         Parameters = @('LicenseGroups')
         OptionalParameters = @('SkipSyncCheck','SkipDynamicGroupCheck')
-        
+    }
+    MsolRemoveLicenseGroupTask = @{
+        Command = 'Remove-LicenseGroupMembership'
+        Initializer = 'Update-LicenseGroupCache'
+        Parameters = @('LicenseGroups')
+        OptionalParameters = @('SkipBaseLicenseCheck','SkipStashLicense')
+    }
+    MsolRestoreLicenseGroupTask = @{
+        Command = 'Restore-LicenseGroupMembership'
+        Initializer = 'Update-LicenseGroupCache'
+        Parameters = @()
+        OptionalParameters = @('SkipSyncCheck')
     }
     EnableCSUser = @{
         Command = 'Enable-KBAOnpremCSUser'
