@@ -250,16 +250,72 @@ function Remove-LicenseGroupMembership
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
         [string]
         $SamAccountName,
-        [Parameter(Mandatory=$true,ParameterSetName='NamedGroups',ValueFromPipelineByPropertyName=$true)]
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
         [string[]]
         $LicenseGroups,
-        [Parameter(Mandatory=$true,ParameterSetName='AllGroups',ValueFromPipelineByPropertyName=$true)]
+        [Parameter(Mandatory=$false,ValueFromPipelineByPropertyName=$true)]
         [switch]
-        $All,
-        [Parameter(Mandatory=$false,ParameterSetName='NamedGroups',ValueFromPipelineByPropertyName=$true)]
-        [switch]
-        $SkipBaseLicenseCheck,
-        [Parameter(Mandatory=$false,ParameterSetName='AllGroups',ValueFromPipelineByPropertyName=$true)]
+        $SkipBaseLicenseCheck
+    )
+    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('MemberOf')
+    $currentMemberships = @{}
+    foreach ($dn in $adUser.MemberOf)
+    {
+        $group = $Script:LicenseGroupCache.GroupsByDn[$dn]
+        if ($null -ne $group)
+        {
+            $currentMemberships.Add($group.Guid, $group)
+        }
+    }
+    if ($currentMemberships.Count -eq 0)
+    {
+        return
+    }
+    $removeFrom = @()
+    foreach ($groupGuid in $LicenseGroups)
+    {
+        $currentMemberships.Remove($groupGuid)
+        $group = $Script:LicenseGroupCache.GroupsByGuid[$groupGuid] 
+        if ($null -eq $group)
+        {
+            throw 'Unknown license group'
+        }
+        $removeFrom += $group                
+    }
+    if ($removeFrom.Count -eq 0)
+    {
+        return
+    }
+    if (-not $SkipBaseLicenseCheck)
+    {
+        $baseLicensePresent = $false
+        foreach ($group in $currentMemberships)
+        {
+            if ($group.category -eq 'A')
+            {
+                $baseLicensePresent = $true
+                break
+            }
+        }
+        if (-not $baseLicensePresent)
+        {
+            throw 'Removing licenses would leave user without a base license. Use SkipBaseLicenseCheck to force removal.'
+        }
+    }
+    foreach ($group in $removeFrom)
+    {
+        Remove-ADGroupMember -Identity $group.Dn -Members $adUser.DistinguishedName -Confirm:$false
+    }
+}
+
+function Remove-AllLicenseGroupMembership
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $SamAccountName,
+        [Parameter(Mandatory=$false,ValueFromPipelineByPropertyName=$true)]
         [switch]
         $SkipStashLicense
     )
@@ -277,56 +333,12 @@ function Remove-LicenseGroupMembership
     {
         return
     }
-    if ($All)
+    if (-not $SkipStashLicense)
     {
-        $removeFrom = $currentMemberships.Values
+        $serializedLicenses = $currentMemberships.Values.Guid -join ','
+        Set-ADUser -Identity $SamAccountName -Add @{'msDS-CloudExtensionAttribute1'=$serializedLicenses}
     }
-    else
-    {
-        $removeFrom = @()
-        foreach ($groupGuid in $LicenseGroups)
-        {
-            $currentMemberships.Remove($groupGuid)
-            $group = $Script:LicenseGroupCache.GroupsByGuid[$groupGuid] 
-            if ($null -eq $group)
-            {
-                throw 'Unknown license group'
-            }
-            $removeFrom += $group                
-        }
-    }
-    if ($removeFrom.Count -eq 0)
-    {
-        return
-    }
-    if ($All)
-    {
-        if (-not $SkipStashLicense)
-        {
-            $serializedLicenses = $removeFrom.Guid -join ','
-            Set-ADUser -Identity $SamAccountName -Add @{'msDS-CloudExtensionAttribute1'=$serializedLicenses}
-        }
-    }
-    else
-    {
-        if (-not $SkipBaseLicenseCheck)
-        {
-            $baseLicensePresent = $false
-            foreach ($group in $currentMemberships)
-            {
-                if ($group.category -eq 'A')
-                {
-                    $baseLicensePresent = $true
-                    break
-                }
-            }
-            if (-not $baseLicensePresent)
-            {
-                throw 'Removing licenses would leave user without a base license. Use SkipBaseLicenseCheck to force removal.'
-            }
-        }
-    }
-    foreach ($group in $removeFrom)
+    foreach ($group in $currentMemberships.Values)
     {
         Remove-ADGroupMember -Identity $group.Dn -Members $adUser.DistinguishedName -Confirm:$false
     }
@@ -353,6 +365,6 @@ function Restore-LicenseGroupMembership
         throw 'User has no stashed licenses in msDS-CloudExtensionAttribute1'
     }
     $deserializedLicenses = $adUser.'msDS-CloudExtensionAttribute1' -split ','
-    Set-LicenseGroupMembership -SamAccountName $SamAccountName -LicenseGroups $deserializedLicenses -SkipDynamicGroupCheck
+    Set-LicenseGroupMembership -SamAccountName $SamAccountName -LicenseGroups $deserializedLicenses -SkipDynamicGroupCheck -SkipSyncCheck:$SkipSyncCheck
     Set-ADUser -Identity $SamAccountName -Clear 'msDS-CloudExtensionAttribute1'
 }

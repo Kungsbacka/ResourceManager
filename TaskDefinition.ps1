@@ -125,13 +125,19 @@
         Parameters = @('LicenseGroups')
         OptionalParameters = @('SkipSyncCheck','SkipDynamicGroupCheck')
     }
-    MsolRemoveLicenseGroupTask = @{
+    MsolRemoveLicenseGroup = @{
         Command = 'Remove-LicenseGroupMembership'
         Initializer = 'Update-LicenseGroupCache'
         Parameters = @('LicenseGroups')
-        OptionalParameters = @('SkipBaseLicenseCheck','SkipStashLicense')
+        OptionalParameters = @('SkipBaseLicenseCheck')
     }
-    MsolRestoreLicenseGroupTask = @{
+    MsolRemoveAllLicenseGroup = @{
+        Command = 'Remove-AllLicenseGroupMembership'
+        Initializer = 'Update-LicenseGroupCache'
+        Parameters = @()
+        OptionalParameters = @('SkipStashLicense')
+    }
+    MsolRestoreLicenseGroup = @{
         Command = 'Restore-LicenseGroupMembership'
         Initializer = 'Update-LicenseGroupCache'
         Parameters = @()
