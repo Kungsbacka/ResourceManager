@@ -52,15 +52,15 @@ function Enable-KBAMsolSync
     )
     $params = @{
         Identity = $Identity
-        Properties = @('ExtensionAttribute11')
+        Properties = @('extensionAttribute11')
     }
     $user = Get-ADUser @params
-    if ($null -eq $user.ExtensionAttribute11)
+    if ($null -eq $user.extensionAttribute11)
     {
         $params = @{
             Identity = $Identity
             Add = @{
-                ExtensionAttribute11 = 'SYNC_ME'
+                extensionAttribute11 = 'SYNC_ME'
             }
             Replace = @{
                 # MsExchUsageLocation is synced to UsageLocation in Azure AD
@@ -123,7 +123,7 @@ function Remove-KBAMsolUserLicense
     {
         return # User has no license
     }
-    Set-ADUser -Identity $SamAccountName -Replace @{ExtensionAttribute1=$licenseJson}
+    Set-ADUser -Identity $SamAccountName -Replace @{'msDS-cloudExtensionAttribute1'=$licenseJson}
     $removeLicenses = New-Object 'System.Collections.Generic.List[string]'
     foreach ($item in $msolUser.AssignedLicenses)
     {
@@ -144,14 +144,14 @@ function Restore-KBAMsolUserLicense
         [string]
         $SamAccountName
     )
-    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('ExtensionAttribute1')
-    if ($null -eq $adUser.ExtensionAttribute1)
+    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('msDS-cloudExtensionAttribute1')
+    if ($null -eq $adUser.'msDS-cloudExtensionAttribute1')
     {
-        throw 'No stashed license exists in extensionAttribute1'
+        throw 'No stashed license exists in msDS-cloudExtensionAttribute1'
     }
-    $license = $adUser.ExtensionAttribute1 | ConvertFrom-Json
+    $license = $adUser.'msDS-cloudExtensionAttribute1' | ConvertFrom-Json
     Set-KBAMsolUserLicense -UserPrincipalName $UserPrincipalName -License $license
-    Set-ADUser -Identity $SamAccountName -Clear 'ExtensionAttribute1'
+    Set-ADUser -Identity $SamAccountName -Clear 'msDS-cloudExtensionAttribute1'
 }
 
 function Set-LicenseGroupMembership
@@ -171,8 +171,8 @@ function Set-LicenseGroupMembership
         [switch]
         $SkipDynamicGroupCheck
     )
-    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('MemberOf','ExtensionAttribute11')
-    if (-not $SkipSyncCheck -and $null -eq $adUser.ExtensionAttribute11)
+    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('MemberOf','extensionAttribute11')
+    if (-not $SkipSyncCheck -and $null -eq $adUser.extensionAttribute11)
     {
         throw 'User is not synced to AzureAD'
     }
@@ -336,7 +336,7 @@ function Remove-AllLicenseGroupMembership
     if (-not $SkipStashLicense)
     {
         $serializedLicenses = $currentMemberships.Values.Guid -join ','
-        Set-ADUser -Identity $SamAccountName -Add @{'msDS-CloudExtensionAttribute1'=$serializedLicenses}
+        Set-ADUser -Identity $SamAccountName -Add @{'msDS-cloudExtensionAttribute1'=$serializedLicenses}
     }
     foreach ($group in $currentMemberships.Values)
     {
@@ -355,16 +355,16 @@ function Restore-LicenseGroupMembership
         [switch]
         $SkipSyncCheck
     )
-    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('msDS-CloudExtensionAttribute1','ExtensionAttribute11')
-    if (-not $SkipSyncCheck -and $null -eq $adUser.ExtensionAttribute11)
+    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('msDS-cloudExtensionAttribute1','extensionAttribute11')
+    if (-not $SkipSyncCheck -and $null -eq $adUser.extensionAttribute11)
     {
         throw 'User is not synced to AzureAD'
     }
-    if ($null -eq $adUser.'msDS-CloudExtensionAttribute1')
+    if ($null -eq $adUser.'msDS-cloudExtensionAttribute1')
     {
-        throw 'User has no stashed licenses in msDS-CloudExtensionAttribute1'
+        throw 'User has no stashed licenses in msDS-cloudExtensionAttribute1'
     }
-    $deserializedLicenses = $adUser.'msDS-CloudExtensionAttribute1' -split ','
+    $deserializedLicenses = $adUser.'msDS-cloudExtensionAttribute1' -split ','
     Set-LicenseGroupMembership -SamAccountName $SamAccountName -LicenseGroups $deserializedLicenses -SkipDynamicGroupCheck -SkipSyncCheck:$SkipSyncCheck
-    Set-ADUser -Identity $SamAccountName -Clear 'msDS-CloudExtensionAttribute1'
+    Set-ADUser -Identity $SamAccountName -Clear 'msDS-cloudExtensionAttribute1'
 }
