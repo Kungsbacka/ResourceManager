@@ -4,18 +4,12 @@ $Config = @{
         ConnectionString = 'Server=<Server>;Database=<Database>;Integrated Security=True'
         LogPath = '<log directory>'
     }
-    HomeFolder = @{
-        Domain = '<AD domain>'
-    }
     SamlId = @{
         Domain = '<Domain>'
     }
     MicrosoftOnline = @{
         AccountName = '<License account name>'
         UsageLocation = 'SE'
-    }
-    SkypeOnprem = @{
-        RegistrarPool = '<Skype pool FQDN>'
     }
     # Office 365 credentials for an account with user administration privileges.
     # Password must be encrypted with the same credentials that is running the script.
@@ -58,7 +52,7 @@ $Config = @{
             AddressBookPolicy = '<Policy name>'
             IssueWarningQuota = 10000MB
             ProhibitSendQuota = 12000MB
-            ProhibitSendReceiveQuota = 14000MB 
+            ProhibitSendReceiveQuota = 14000MB
             Student = @{
                 RetentionPolicy = '<Policy name>'
                 AddressBookPolicy = '<Policy name>'
@@ -77,7 +71,7 @@ $Config = @{
             Student = @{
                 OwaMailboxPolicy = '<Policy GUID>'
             }
-        }   
+        }
         Calendar = @{
             DefaultCalendarPermission = 'Reviewer'
             WorkingHoursTimeZone = 'W. Europe Standard Time'
@@ -94,6 +88,8 @@ $Config = @{
         AutoReply = @{
             DefaultMessage = ''
         }
+    }
+    Exchange = @{
         WelcomeMail = @{
             Server = '<SMTP server>'
             From = '<From address>'

@@ -22,14 +22,14 @@ function Send-RmWelcomeMail
     # not allowed to authenticate to our Exchange SMTP receive connector.
     $smtpClient = New-Object -TypeName 'System.Net.Mail.SmtpClient'
     $smtpClient.UseDefaultCredentials = $false
-    $smtpClient.Host = $Script:Config.ExchangeOnprem.WelcomeMail.Server
+    $smtpClient.Host = $Script:Config.Exchange.WelcomeMail.Server
     $msg = New-Object -TypeName 'System.Net.Mail.MailMessage'
     $msg.BodyEncoding = [System.Text.Encoding]::UTF8
     $msg.SubjectEncoding = [System.Text.Encoding]::UTF8
     $msg.IsBodyHtml = $true
-    $msg.From = $Script:Config.ExchangeOnprem.WelcomeMail.From
-    $msg.Subject = $Script:Config.ExchangeOnprem.WelcomeMail.Subject
-    $msg.Body = $Script:Config.ExchangeOnprem.WelcomeMail.Body
+    $msg.From = $Script:Config.Exchange.WelcomeMail.From
+    $msg.Subject = $Script:Config.Exchange.WelcomeMail.Subject
+    $msg.Body = $Script:Config.Exchange.WelcomeMail.Body
     $msg.To.Add($UserPrincipalName)
     $smtpClient.Send($msg)
 }
