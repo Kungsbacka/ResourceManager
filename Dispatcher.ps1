@@ -5,11 +5,10 @@ Import-Module -Name 'ActiveDirectory'
 
 . "$PSScriptRoot\Config.ps1"
 . "$PSScriptRoot\TaskDefinition.ps1"
+. "$PSScriptRoot\Exchange.ps1"
 . "$PSScriptRoot\ExchangeOnline.ps1"
 . "$PSScriptRoot\ExchangeOnprem.ps1"
 . "$PSScriptRoot\MicrosoftOnline.ps1"
-. "$PSScriptRoot\SkypeOnprem.ps1"
-. "$PSScriptRoot\HomeFolder.ps1"
 . "$PSScriptRoot\SamlId.ps1"
 . "$PSScriptRoot\Logger.ps1"
 
@@ -93,7 +92,7 @@ function Start-Task
             {
                 $paramValue = $SequenceTask.$paramName
             }
-            else 
+            else
             {
                 continue
             }
@@ -197,7 +196,7 @@ foreach ($user in $users)
             {
                 New-TaskLogEntry -Task 'ValidateDeserializedTaskJson' -Target $user.UserPrincipalName -Result ([TaskResult]::Failure)
                 Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName -TaskJson $user.CarLicense
-                exit        
+                exit
             }
         }
         $isSequenceTask = ($null -ne $currentTask.Tasks -and $currentTask.Tasks.Count -gt 0)

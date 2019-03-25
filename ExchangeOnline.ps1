@@ -66,7 +66,7 @@ function Test-KBAOnlineMailbox
     $result
 }
 
-function Set-KBAOnlineOwa
+function Set-RmOnlineOwa
 {
     param
     (
@@ -89,7 +89,7 @@ function Set-KBAOnlineOwa
     Set-OnlineMailboxRegionalConfiguration @params
 }
 
-function Set-KBAOnlineMailbox
+function Set-RmOnlineMailbox
 {
     param
     (

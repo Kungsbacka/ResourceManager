@@ -41,7 +41,7 @@ function Update-LicenseGroupCache
     }
 }
 
-function Enable-KBAMsolSync
+function Enable-RmMsolSync
 {
     param
     (
@@ -71,7 +71,7 @@ function Enable-KBAMsolSync
     }
 }
 
-function Set-KBAMsolUserLicense
+function Set-RmMsolUserLicense
 {
     param
     (
@@ -105,7 +105,7 @@ function Set-KBAMsolUserLicense
     Set-AzureADUserLicense -ObjectId $UserPrincipalName -AssignedLicenses $assignedLicenses
 }
 
-function Remove-KBAMsolUserLicense
+function Remove-RmMsolUserLicense
 {
     param
     (
@@ -133,7 +133,7 @@ function Remove-KBAMsolUserLicense
     Set-AzureADUserLicense -ObjectId $UserPrincipalName -AssignedLicenses $assignedLicenses
 }
 
-function Restore-KBAMsolUserLicense
+function Restore-RmMsolUserLicense
 {
     param
     (
@@ -150,11 +150,11 @@ function Restore-KBAMsolUserLicense
         throw 'No stashed license exists in msDS-cloudExtensionAttribute1'
     }
     $license = $adUser.'msDS-cloudExtensionAttribute1' | ConvertFrom-Json
-    Set-KBAMsolUserLicense -UserPrincipalName $UserPrincipalName -License $license
+    Set-RmMsolUserLicense -UserPrincipalName $UserPrincipalName -License $license
     Set-ADUser -Identity $SamAccountName -Clear 'msDS-cloudExtensionAttribute1'
 }
 
-function Set-LicenseGroupMembership
+function Set-RmLicenseGroupMembership
 {
     param
     (
@@ -190,7 +190,7 @@ function Set-LicenseGroupMembership
     $categories = @{}
     foreach ($groupGuid in $LicenseGroups)
     {
-        $group = $Script:LicenseGroupCache.GroupsByGuid[$groupGuid] 
+        $group = $Script:LicenseGroupCache.GroupsByGuid[$groupGuid]
         if ($null -eq $group)
         {
             throw 'Unknown license group'
@@ -243,7 +243,7 @@ function Set-LicenseGroupMembership
     }
 }
 
-function Remove-LicenseGroupMembership
+function Remove-RmLicenseGroupMembership
 {
     param
     (
@@ -275,12 +275,12 @@ function Remove-LicenseGroupMembership
     foreach ($groupGuid in $LicenseGroups)
     {
         $currentMemberships.Remove($groupGuid)
-        $group = $Script:LicenseGroupCache.GroupsByGuid[$groupGuid] 
+        $group = $Script:LicenseGroupCache.GroupsByGuid[$groupGuid]
         if ($null -eq $group)
         {
             throw 'Unknown license group'
         }
-        $removeFrom += $group                
+        $removeFrom += $group
     }
     if ($removeFrom.Count -eq 0)
     {
@@ -308,7 +308,7 @@ function Remove-LicenseGroupMembership
     }
 }
 
-function Remove-AllLicenseGroupMembership
+function Remove-RmAllLicenseGroupMembership
 {
     param
     (
@@ -344,7 +344,7 @@ function Remove-AllLicenseGroupMembership
     }
 }
 
-function Restore-LicenseGroupMembership
+function Restore-RmLicenseGroupMembership
 {
     param
     (
@@ -365,6 +365,6 @@ function Restore-LicenseGroupMembership
         throw 'User has no stashed licenses in msDS-cloudExtensionAttribute1'
     }
     $deserializedLicenses = $adUser.'msDS-cloudExtensionAttribute1' -split ','
-    Set-LicenseGroupMembership -SamAccountName $SamAccountName -LicenseGroups $deserializedLicenses -SkipDynamicGroupCheck -SkipSyncCheck:$SkipSyncCheck
+    Set-RmLicenseGroupMembership -SamAccountName $SamAccountName -LicenseGroups $deserializedLicenses -SkipDynamicGroupCheck -SkipSyncCheck:$SkipSyncCheck
     Set-ADUser -Identity $SamAccountName -Clear 'msDS-cloudExtensionAttribute1'
 }

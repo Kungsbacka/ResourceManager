@@ -118,7 +118,7 @@ function Test-KBAOnpremMailbox
     $result
 }
 
-function Set-KBAOnpremOwa
+function Set-RmOnpremOwa
 {
     param
     (
@@ -158,7 +158,7 @@ function Set-KBAOnpremOwa
     Set-OnpremMailboxRegionalConfiguration @params
 }
 
-function Set-KBAOnpremCalendar
+function Set-RmOnpremCalendar
 {
     param
     (
@@ -225,10 +225,10 @@ function Set-KBAOnpremCalendar
     }
 }
 
-# The mailbox configuration is moved to Enable-KBAOnpremMailbox.
+# The mailbox configuration is moved to Enable-RmOnpremMailbox.
 # This function is kept around to be able to run mailbox configuration
 # as a separate task after the mailbox is created.
-function Set-KBAOnpremMailbox
+function Set-RmOnpremMailbox
 {
     param
     (
@@ -276,7 +276,7 @@ function Set-KBAOnpremMailbox
     Set-OnpremMailbox @params
 }
 
-function Enable-KBAOnpremMailbox
+function Enable-RmOnpremMailbox
 {
     param
     (
@@ -316,7 +316,7 @@ function Enable-KBAOnpremMailbox
     Enable-OnpremMailbox @params | Out-Null
     # Sleep until mailbox is available
     $retryCount = 0
-    do 
+    do
     {
         Start-Sleep -Seconds 5
     }
@@ -355,7 +355,7 @@ function Enable-KBAOnpremMailbox
     Set-OnpremMailbox @params
 }
 
-function Set-KBAOnpremRemoteMailbox
+function Set-RmOnpremRemoteMailbox
 {
     param
     (
@@ -385,7 +385,7 @@ function Set-KBAOnpremRemoteMailbox
     }
 }
 
-function Enable-KBAOnpremRemoteMailbox
+function Enable-RmOnpremRemoteMailbox
 {
     param
     (
@@ -440,7 +440,7 @@ function Enable-KBAOnpremRemoteMailbox
     Start-Sleep -Seconds 5
 }
 
-function Disable-KBAOnpremMailbox
+function Disable-RmOnpremMailbox
 {
     param
     (
@@ -456,7 +456,7 @@ function Disable-KBAOnpremMailbox
     Disable-OnpremMailbox -Identity $UserPrincipalName -Confirm:$false | Out-Null
 }
 
-function Connect-KBAOnpremMailbox
+function Connect-RmOnpremMailbox
 {
     param
     (
@@ -481,8 +481,8 @@ function Connect-KBAOnpremMailbox
     {
         throw 'No disconnected mailbox exists for target'
     }
-    $disconnectedMailboxes = Get-OnpremMailboxDatabase | 
-        Get-OnpremMailboxStatistics -Filter "LegacyDn -eq '$($user.LegacyExchangeDn)'" -NoADLookup | 
+    $disconnectedMailboxes = Get-OnpremMailboxDatabase |
+        Get-OnpremMailboxStatistics -Filter "LegacyDn -eq '$($user.LegacyExchangeDn)'" -NoADLookup |
         Sort-Object -Property DisconnectDate -Descending
 
     if ($disconnectedMailboxes.Count -eq 0 -or $null -eq $disconnectedMailboxes[0].DisconnectDate)
@@ -498,7 +498,7 @@ function Connect-KBAOnpremMailbox
     Connect-OnpremMailbox @param
 }
 
-function Cleanup-KBAOnpremMailbox
+function Cleanup-RmOnpremMailbox
 {
     param
     (
@@ -550,7 +550,7 @@ function Cleanup-KBAOnpremMailbox
     }
 }
 
-function Set-KBAOnpremMailboxAutoReplyState
+function Set-RmOnpremMailboxAutoReplyState
 {
     param
     (
@@ -563,7 +563,7 @@ function Set-KBAOnpremMailboxAutoReplyState
         [Parameter(ValueFromPipelineByPropertyName=$true)]
         [string]
         $Message
-        
+
     )
     $result = Test-KBAOnpremMailbox $UserPrincipalName
     if ($result -ne [TestMailboxResult]::Onprem)
@@ -588,7 +588,7 @@ function Set-KBAOnpremMailboxAutoReplyState
     }
     else
     {
-        $internalAndExternalMessage = $null    
+        $internalAndExternalMessage = $null
     }
     $params = @{
         Identity = $UserPrincipalName
@@ -599,40 +599,7 @@ function Set-KBAOnpremMailboxAutoReplyState
     Set-OnpremMailboxAutoReplyConfiguration @params | Out-Null
 }
 
-function Send-KBAOnpremWelcomeMail
-{
-    param
-    (
-        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [string]
-        $UserPrincipalName,
-        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
-        [ValidateSet('Employee', 'Faculty', 'Student', 'Shared')]
-        [string]
-        $Type
-    )
-    if ($Type -notin 'Employee', 'Faculty')
-    {
-        throw 'Wrong mailbox type. Welcome mail is only sent to employees.'
-    }
-    # Use SmtpClient instead of Send-MailMessage since the latter
-    # always tries to authenticate with default credentials. A gMSA is
-    # not allowed to authenticate to our Exchange SMTP receive connector.
-    $smtpClient = New-Object -TypeName 'System.Net.Mail.SmtpClient'
-    $smtpClient.UseDefaultCredentials = $false
-    $smtpClient.Host = $Script:Config.ExchangeOnprem.WelcomeMail.Server
-    $msg = New-Object -TypeName 'System.Net.Mail.MailMessage'
-    $msg.BodyEncoding = [System.Text.Encoding]::UTF8
-    $msg.SubjectEncoding = [System.Text.Encoding]::UTF8
-    $msg.IsBodyHtml = $true
-    $msg.From = $Script:Config.ExchangeOnprem.WelcomeMail.From
-    $msg.Subject = $Script:Config.ExchangeOnprem.WelcomeMail.Subject
-    $msg.Body = $Script:Config.ExchangeOnprem.WelcomeMail.Body
-    $msg.To.Add($UserPrincipalName)
-    $smtpClient.Send($msg)
-}
-
-function Set-KBAOnpremMailboxMessageConfiguration
+function Set-RmOnpremMailboxMessageConfiguration
 {
     param
     (

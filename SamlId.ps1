@@ -1,7 +1,7 @@
 ﻿# Make all error terminating errors
 $Global:ErrorActionPreference = 'Stop'
 
-function Set-SamlId
+function Set-RmSamlId
 {
     param
     (

@@ -1,164 +1,146 @@
 ﻿$Script:TaskDefinitions = @{
     EnableMailbox = @{
-        Command = 'Enable-KBAOnpremMailbox'
+        Command = 'Enable-RmOnpremMailbox'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @('Type')
         OptionalParameters = @()
     }
     EnableRemoteMailbox = @{
-        Command = 'Enable-KBAOnpremRemoteMailbox'
+        Command = 'Enable-RmOnpremRemoteMailbox'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @()
         OptionalParameters = @()
     }
     DisableMailbox = @{
-        Command = 'Disable-KBAOnpremMailbox'
+        Command = 'Disable-RmOnpremMailbox'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @()
         OptionalParameters = @()
     }
     ConnectMailbox = @{
-        Command = 'Connect-KBAOnpremMailbox'
+        Command = 'Connect-RmOnpremMailbox'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @()
         OptionalParameters = @()
     }
     ConfigureMailbox = @{
-        Command = 'Set-KBAOnpremMailbox'
+        Command = 'Set-RmOnpremMailbox'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @('Type')
         OptionalParameters = @()
     }
     ConfigureRemoteMailbox = @{
-        Command = 'Set-KBAOnpremRemoteMailbox'
+        Command = 'Set-RmOnpremRemoteMailbox'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @()
         OptionalParameters = @()
     }
     ConfigureOwa = @{
-        Command = 'Set-KBAOnpremOwa'
+        Command = 'Set-RmOnpremOwa'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @('Type')
         OptionalParameters = @()
     }
     ConfigureCalendar = @{
-        Command = 'Set-KBAOnpremCalendar'
+        Command = 'Set-RmOnpremCalendar'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @('Type')
         OptionalParameters = @()
     }
     ConfigureMessage = @{
-        Command = 'Set-KBAOnpremMailboxMessageConfiguration'
+        Command = 'Set-RmOnpremMailboxMessageConfiguration'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @()
         OptionalParameters = @()
     }
     CleanupMailbox = @{
-        Command = 'Cleanup-KBAOnpremMailbox'
+        Command = 'Cleanup-RmOnpremMailbox'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @()
         OptionalParameters = @()
     }
     ConfigureMailboxAutoReplyTask = @{
-        Command = 'Set-KBAOnpremMailboxAutoReplyState'
+        Command = 'Set-RmOnpremMailboxAutoReplyState'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @('Enabled')
         OptionalParameters = @('Message')
     }
     SendWelcomeMail = @{
-        Command = 'Send-KBAOnpremWelcomeMail'
+        Command = 'Send-RmWelcomeMail'
         Initializer = $null
         Parameters = @('Type')
         OptionalParameters = @()
     }
     ConfigureOnlineMailbox = @{
-        Command = 'Set-KBAOnlineMailbox'
+        Command = 'Set-RmOnlineMailbox'
         Initializer = 'Connect-KBAExchangeOnline'
         Parameters = @('Type')
         OptionalParameters = @()
     }
     ConfigureOnlineOwa = @{
-        Command = 'Set-KBAOnlineOwa'
+        Command = 'Set-RmOnlineOwa'
         Initializer = 'Connect-KBAExchangeOnline'
         Parameters = @()
         OptionalParameters = @()
     }
-    HomeFolder = @{
-        Command = 'New-HomeFolder'
-        Initializer = $null
-        Parameters = @('Path')
-        OptionalParameters = @()
-    }
     SamlId = @{
-        Command = 'Set-SamlId'
+        Command = 'Set-RmSamlId'
         Initializer = $null
         Parameters = @()
         OptionalParameters = @()
     }
     MsolEnableSync = @{
-        Command = 'Enable-KBAMsolSync'
+        Command = 'Enable-RmMsolSync'
         Initializer = $null
         Parameters = @()
         OptionalParameters = @()
     }
     MsolLicense = @{
-        Command = 'Set-KBAMsolUserLicense'
+        Command = 'Set-RmMsolUserLicense'
         Initializer = 'Connect-KBAAzureAD'
         Parameters = @('License')
         OptionalParameters = @()
     }
     MsolRemoveLicense = @{
-        Command = 'Remove-KBAMsolUserLicense'
+        Command = 'Remove-RmMsolUserLicense'
         Initializer = 'Connect-KBAAzureAD'
         Parameters = @()
         OptionalParameters = @()
     }
     MsolRestoreLicense = @{
-        Command = 'Restore-KBAMsolUserLicense'
+        Command = 'Restore-RmMsolUserLicense'
         Initializer = 'Connect-KBAAzureAD'
         Parameters = @()
         OptionalParameters = @()
     }
     MsolLicenseGroup = @{
-        Command = 'Set-LicenseGroupMembership'
+        Command = 'Set-RmLicenseGroupMembership'
         Initializer = 'Update-LicenseGroupCache'
         Parameters = @('LicenseGroups')
         OptionalParameters = @('SkipSyncCheck','SkipDynamicGroupCheck')
     }
     MsolRemoveLicenseGroup = @{
-        Command = 'Remove-LicenseGroupMembership'
+        Command = 'Remove-RmLicenseGroupMembership'
         Initializer = 'Update-LicenseGroupCache'
         Parameters = @('LicenseGroups')
         OptionalParameters = @('SkipBaseLicenseCheck')
     }
     MsolRemoveAllLicenseGroup = @{
-        Command = 'Remove-AllLicenseGroupMembership'
+        Command = 'Remove-RmAllLicenseGroupMembership'
         Initializer = 'Update-LicenseGroupCache'
         Parameters = @()
         OptionalParameters = @('SkipStashLicense')
     }
     MsolRestoreLicenseGroup = @{
-        Command = 'Restore-LicenseGroupMembership'
+        Command = 'Restore-RmLicenseGroupMembership'
         Initializer = 'Update-LicenseGroupCache'
         Parameters = @()
         OptionalParameters = @('SkipSyncCheck')
     }
-    EnableCSUser = @{
-        Command = 'Enable-KBAOnpremCSUser'
-        Initializer = 'Import-KBASkypeOnpremModule'
-        Parameters = @()
-        OptionalParameters = @()
-    }
-    GrantCSConferencingPolicy = @{
-        Command = 'Grant-KBAOnpremCSConferencingPolicy'
-        Initializer = 'Import-KBASkypeOnpremModule'
-        Parameters = @('ConferencingPolicy')
-        OptionalParameters = @()
-    }
     Wait = @{
         Command = $null
         Initializer = $null
-        Parameters = @('Minutes')    
+        Parameters = @('Minutes')
         OptionalParameters = @()
     }
     Debug = @{
