@@ -9,6 +9,7 @@ Import-Module -Name 'ActiveDirectory'
 . "$PSScriptRoot\ExchangeOnline.ps1"
 . "$PSScriptRoot\ExchangeOnprem.ps1"
 . "$PSScriptRoot\MicrosoftOnline.ps1"
+. "$PSScriptRoot\OnpremAd.ps1"
 . "$PSScriptRoot\SamlId.ps1"
 . "$PSScriptRoot\Logger.ps1"
 

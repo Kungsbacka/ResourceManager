@@ -59,11 +59,17 @@
         Parameters = @()
         OptionalParameters = @()
     }
-    ConfigureMailboxAutoReplyTask = @{
+    ConfigureMailboxAutoReply = @{
         Command = 'Set-RmOnpremMailboxAutoReplyState'
         Initializer = 'Connect-KBAExchangeOnprem'
         Parameters = @('Enabled')
         OptionalParameters = @('Message')
+    }
+    SetHiddenFromAddressList = @{
+        Command = 'Set-RmOnpremHiddenFromAddressList'
+        Initializer = 'Connect-KBAExchangeOnprem'
+        Parameters = @('Hidden')
+        OptionalParameters = @()
     }
     SendWelcomeMail = @{
         Command = 'Send-RmWelcomeMail'
@@ -81,6 +87,12 @@
         Command = 'Set-RmOnlineOwa'
         Initializer = 'Connect-KBAExchangeOnline'
         Parameters = @()
+        OptionalParameters = @()
+    }
+    SetOnlineMailboxType = @{
+        Command = 'Set-RmOnlineMailboxType'
+        Initializer = 'Connect-KBAExchangeOnline'
+        Parameters = @('MailboxType')
         OptionalParameters = @()
     }
     SamlId = @{
@@ -136,6 +148,18 @@
         Initializer = 'Update-LicenseGroupCache'
         Parameters = @()
         OptionalParameters = @('SkipSyncCheck')
+    }
+    AddToOnpremGroup = @{
+        Command = 'Add-OnpremGroupMember'
+        Initializer = $null
+        Parameters = @('Group')
+        OptionalParameters = @()
+    }
+    RemoveFromOnpremGroup = @{
+        Command = 'Remove-OnpremGroupMember'
+        Initializer = $null
+        Parameters = @('Group')
+        OptionalParameters = @()
     }
     Wait = @{
         Command = $null

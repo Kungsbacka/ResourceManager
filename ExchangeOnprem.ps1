@@ -20,7 +20,7 @@ function Connect-KBAExchangeOnprem
         $Credential
     )
     $server = $Script:Config.ExchangeOnprem.Servers | Get-Random
-    Get-PSSession -Name 'KBAExchOnprem' -ErrorAction SilentlyContinue | Remove-PSSession
+    Get-PSSession -Name 'RmExchangeOnprem' -ErrorAction SilentlyContinue | Remove-PSSession
     if ($Credential -eq $null)
     {
         $Credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
@@ -29,7 +29,7 @@ function Connect-KBAExchangeOnprem
         )
     }
     $params = @{
-        Name = 'KBAExchOnprem'
+        Name = 'RmExchangeOnprem'
         ConfigurationName = 'Microsoft.Exchange'
         ConnectionUri = "http://$server/PowerShell/"
         Authentication = 'Kerberos'
@@ -606,12 +606,39 @@ function Set-RmOnpremMailboxMessageConfiguration
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
         [string]$UserPrincipalName
     )
-    process
-    {
-        $params = @{
-            Identity = $UserPrincipalName
-            IsReplyAllTheDefaultResponse = $false
-        }
-        Set-OnpremMailboxMessageConfiguration @params
+    $params = @{
+        Identity = $UserPrincipalName
+        IsReplyAllTheDefaultResponse = $false
     }
+    Set-OnpremMailboxMessageConfiguration @params
+}
+
+
+function Set-RmOnpremHiddenFromAddressList
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]$UserPrincipalName,
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [bool]$Hidden
+    )
+    $result = Test-KBAOnpremMailbox $UserPrincipalName
+    if ($result -eq [TestMailboxResult]::Onprem)
+    {
+        $command = 'Set-OnpremMailbox'
+    }
+    elseif ($result -eq [TestMailboxResult]::Remote)
+    {
+        $command = 'Set-OnpremRemoteMailbox'
+    }
+    else
+    {
+        throw 'Target account has no on-prem or remote mailbox'
+    }
+    $params = @{
+        Identity = $UserPrincipalName
+        HiddenFromAddressListsEnabled = $Hidden
+    }
+    &$command @params
 }

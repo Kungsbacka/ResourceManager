@@ -13,13 +13,13 @@ Enum TestMailboxResult
 
 function Connect-KBAExchangeOnline
 {
-    Get-PSSession -Name 'KBAExchOnline' -ErrorAction SilentlyContinue | Remove-PSSession
+    Get-PSSession -Name 'RmExchangeOnline' -ErrorAction SilentlyContinue | Remove-PSSession
     $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
         $Script:Config.Office365.User
         $Script:Config.Office365.Password | ConvertTo-SecureString
     )
     $params = @{
-        Name = 'KBAExchOnline'
+        Name = 'RmExchangeOnline'
         ConfigurationName = 'Microsoft.Exchange'
         ConnectionUri = 'https://outlook.office365.com/powershell-liveid/'
         Authentication = 'Basic'
@@ -77,7 +77,7 @@ function Set-RmOnlineOwa
     $result = Test-KBAOnlineMailbox $UserPrincipalName
     if ($result -ne [TestMailboxResult]::Online)
     {
-        throw 'Target account has no Office 365 mailbox'
+        throw 'Target account has no Exchange Online mailbox'
     }
     $params = @{
         Identity = $UserPrincipalName
@@ -104,7 +104,7 @@ function Set-RmOnlineMailbox
     $result = Test-KBAOnlineMailbox $UserPrincipalName
     if ($result -ne [TestMailboxResult]::Online)
     {
-        throw 'Target account has no Office 365 mailbox'
+        throw 'Target account has no Exchange Online mailbox'
     }
     $params = @{
         Identity = $UserPrincipalName
@@ -124,4 +124,24 @@ function Set-RmOnlineMailbox
         $params.AddressBookPolicy = $Script:Config.ExchangeOnline.Mailbox.Student.AddressBookPolicy
     }
     Set-OnlineMailbox @params
+}
+
+function Set-RmOnlineMailboxType
+{
+    param
+    (
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $UserPrincipalName,
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [ValidateSet('Regular','Room','Equipment','Shared')]
+        [string]
+        $MailboxType
+    )
+    $result = Test-KBAOnlineMailbox $UserPrincipalName
+    if ($result -ne [TestMailboxResult]::Online)
+    {
+        throw 'Target account has no Exchange Online mailbox'
+    }
+    Set-OnlineMailbox -Identity $UserPrincipalName -Type $MailboxType
 }
