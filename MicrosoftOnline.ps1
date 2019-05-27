@@ -13,15 +13,6 @@ function Connect-KBAAzureAD
 
 function Update-LicenseGroupCache
 {
-    function ParseGroup($group)
-    {
-        $json = $group.Location.Substring(8)
-        $obj = ConvertFrom-Json -InputObject $json
-        Add-Member -InputObject $obj -NotePropertyName 'Guid' -NotePropertyValue $group.ObjectGUID
-        Add-Member -InputObject $obj -NotePropertyName 'Dn' -NotePropertyValue $group.DistinguishedName
-        $obj
-    }
-
     if ($Script:LicenseGroupCache)
     {
         return
@@ -226,19 +217,13 @@ function Set-RmLicenseGroupMembership
     }
     if (Compare-Object -ReferenceObject $addTo -DifferenceObject $removeFrom -Property 'Guid')
     {
-        if ($removeFrom.Count -gt 0)
+        foreach ($group in $removeFrom)
         {
-            foreach ($group in $removeFrom)
-            {
-                Remove-ADGroupMember -Identity $group.Dn -Members $adUser.DistinguishedName -Confirm:$false
-            }
+            Remove-ADGroupMember -Identity $group.Dn -Members $adUser.DistinguishedName -Confirm:$false
         }
-        if ($addTo.Count -gt 0)
+        foreach ($group in $addTo)
         {
-            foreach ($group in $addTo)
-            {
-                Add-ADGroupMember -Identity $group.Dn -Members $adUser.DistinguishedName
-            }
+            Add-ADGroupMember -Identity $group.Dn -Members $adUser.DistinguishedName
         }
     }
 }
