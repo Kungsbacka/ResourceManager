@@ -29,6 +29,7 @@ function Remove-OnpremGroupMember
     $params = @{
         Identity = $Group
         Members = @($SamAccountName)
+        Confirm = $false
     }
     Remove-ADGroupMember @params
 }
