@@ -121,6 +121,7 @@ function Set-RmOnlineMailbox
     }
     else # Student
     {
+        $params.RetentionPolicy = $Script:Config.ExchangeOnline.Mailbox.Student.RetentionPolicy
         $params.AddressBookPolicy = $Script:Config.ExchangeOnline.Mailbox.Student.AddressBookPolicy
     }
     Set-OnlineMailbox @params
