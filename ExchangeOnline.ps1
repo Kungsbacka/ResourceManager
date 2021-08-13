@@ -109,6 +109,7 @@ function Set-RmOnlineMailbox
     $params = @{
         Identity = $UserPrincipalName
         Languages = $Script:Config.ExchangeOnline.Mailbox.Languages
+        AuditEnabled = $false
     }
     if ($Type -eq 'Employee' -or $Type -eq 'Shared')
     {
@@ -123,6 +124,12 @@ function Set-RmOnlineMailbox
     {
         $params.RetentionPolicy = $Script:Config.ExchangeOnline.Mailbox.Student.RetentionPolicy
         $params.AddressBookPolicy = $Script:Config.ExchangeOnline.Mailbox.Student.AddressBookPolicy
+    }
+    Set-OnlineMailbox @params
+    # Toggle 'AuditEnabled' off and on again. This is apparently neccesary for auditing to start working
+    $params = @{
+        Identity = $UserPrincipalName
+        AuditEnabled = $true
     }
     Set-OnlineMailbox @params
 }
