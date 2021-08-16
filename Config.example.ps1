@@ -1,4 +1,5 @@
 ﻿# Configuration
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseDeclaredVarsMoreThanAssignments", "")]
 $Config = @{
     Logger = @{
         ConnectionString = 'Server=<Server>;Database=<Database>;Integrated Security=True'
@@ -11,16 +12,15 @@ $Config = @{
         AccountName = '<License account name>'
         UsageLocation = 'SE'
     }
-    # Office 365 credentials for an account with user administration privileges.
-    # Password must be encrypted with the same credentials that is running the script.
-    # Start a new PowerShell prompt as that user, run the following line
-    # (Get-Credential).Password | ConvertFrom-SecureString | Set-Clipboard
-    # and paste in the encrypted password.
-    Office365 = @{
-        MsolUser = '<Office 365 user with permissions to manage users>'
-        MsolPassword = '<encrypted password>'
+    AzureAD = @{
+        User = '<Azure AD user that can assign and remove licenses>'
+        Password = '<Encrypted password>'
     }
     ExchangeOnline = @{
+        AppCertificatePath = '<Path to app registration certificate>'
+        AppCertificatePassword = '<Encrypted password for certificate>'
+        AppId = '<App registration ID>'
+        Organization = 'company.onmicrosoft.com'
         Mailbox = @{
             EmailAddressPolicyEnabled = $false
             RetentionPolicy = '<Policy name>'

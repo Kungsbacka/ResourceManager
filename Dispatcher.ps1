@@ -148,6 +148,7 @@ $params = @{
         'Title'
         'UserPrincipalName'
     )
+    ResultSetSize = 200 # Only do 200 before exiting to avoid problems with Exchange Online
 }
 try
 {
@@ -175,7 +176,8 @@ foreach ($user in $users)
 {
     try
     {
-        $deserializedTasks = ConvertFrom-Json -InputObject $user.CarLicense[0] # Multivalued attribute
+        $user.CarLicense = $user.CarLicense[0] # Multivalued attribute
+        $deserializedTasks = ConvertFrom-Json -InputObject $user.CarLicense
     }
     catch
     {

@@ -13,31 +13,21 @@ Enum TestMailboxResult
 
 function Connect-KBAExchangeOnline
 {
-    Get-PSSession -Name 'RmExchangeOnline' -ErrorAction SilentlyContinue | Remove-PSSession
-    $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
-        $Script:Config.Office365.User
-        $Script:Config.Office365.Password | ConvertTo-SecureString
-    )
     $params = @{
-        Name = 'RmExchangeOnline'
-        ConfigurationName = 'Microsoft.Exchange'
-        ConnectionUri = 'https://outlook.office365.com/powershell-liveid/'
-        Authentication = 'Basic'
-        AllowRedirection = $true
-        Credential = $credential
-    }
-    $session = New-PSSession @params
-    $params = @{
-        Session = $session
-        Prefix = 'Online'
-        DisableNameChecking = $true
+        CertificateFilePath = $Script:Config.ExchangeOnline.AppCertificatePath
+        CertificatePassword = ($Script:Config.ExchangeOnline.AppCertificatePassword | ConvertTo-SecureString)
+        AppId = $Script:Config.ExchangeOnline.AppId
+        Organization = $Script:Config.ExchangeOnline.Organization
         CommandName = @(
-            'Get-Mailbox'
+            'Get-EXOMailbox'
             'Set-Mailbox'
             'Set-MailboxRegionalConfiguration'
         )
+        ShowBanner = $false
+        ShowProgress = $false
+        Prefix = 'Online'
     }
-    Import-PSSession @params | Out-Null
+    Connect-ExchangeOnline @params
 }
 
 function Test-KBAOnlineMailbox
@@ -51,14 +41,14 @@ function Test-KBAOnlineMailbox
     $result = [TestMailboxResult]::None
     try
     {
-        if (Get-OnlineMailbox -Identity $UserPrincipalName)
+        if (Get-EXOMailbox -Identity $UserPrincipalName)
         {
             $result = [TestMailboxResult]::Online
         }
     }
     catch
     {
-        if ($_.CategoryInfo.Reason -ne 'ManagementObjectNotFoundException')
+        if ($_.Exception.Message -notlike '*ManagementObjectNotFoundException*')
         {
             throw
         }
@@ -126,6 +116,7 @@ function Set-RmOnlineMailbox
         $params.AddressBookPolicy = $Script:Config.ExchangeOnline.Mailbox.Student.AddressBookPolicy
     }
     Set-OnlineMailbox @params
+
     # Toggle 'AuditEnabled' off and on again. This is apparently neccesary for auditing to start working
     $params = @{
         Identity = $UserPrincipalName

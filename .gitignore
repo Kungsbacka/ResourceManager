@@ -4,3 +4,5 @@
 Config.ps1
 Config.dev.ps1
 Test.ps1
+*.cer
+*.pfx

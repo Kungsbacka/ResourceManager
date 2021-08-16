@@ -5,8 +5,8 @@ function Connect-KBAAzureAD
 {
     Import-Module -Name 'AzureAD' -DisableNameChecking
     $credential = New-Object -TypeName 'System.Management.Automation.PSCredential' -ArgumentList @(
-        $Script:Config.Office365.User
-        $Script:Config.Office365.Password | ConvertTo-SecureString
+        $Script:Config.AzuerAD.User
+        $Script:Config.AzureAD.Password | ConvertTo-SecureString
     )
     Connect-AzureAD -Credential $credential -LogLevel None | Out-Null
 }

@@ -136,7 +136,15 @@ function Get-ErrorText
     if ($TaskJson)
     {
         # Make sure JSON is properly formatted
+        # May be invalid JSON
+        try
+        {
         $obj = $TaskJson | ConvertFrom-Json
+        }
+        catch
+        {
+            $obj = [pscustomobject]@{InvalidJson = $TaskJson}
+        }
         $TaskJson = $obj | ConvertTo-Json -Depth 4
     }
     if ($TaskId)
