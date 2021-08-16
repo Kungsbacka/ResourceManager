@@ -1,8 +1,7 @@
-*.cmd
-*.dll
 .vscode
-Config.ps1
-Config.dev.ps1
-Test.ps1
+*.cmd
 *.cer
 *.pfx
+Config*.ps1
+Test*.ps1
+~Config.example.ps1
