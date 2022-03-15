@@ -167,21 +167,11 @@ function Set-RmLicenseGroupMembership
     {
         throw 'User is not synced to AzureAD'
     }
-    $currentMemberships = @{}
-    foreach ($dn in $adUser.MemberOf)
-    {
-        $group = $Script:LicenseGroupCache.GroupsByDn[$dn]
-        if ($null -ne $group)
-        {
-            $currentMemberships.Add($group.Guid, $group)
-        }
-    }
-    $addTo = @()
-    $removeFrom = @()
+    $requestedLicenseGroups = @{}
     $categories = @{}
-    foreach ($groupGuid in $LicenseGroups)
+    foreach ($guid in $LicenseGroups)
     {
-        $group = $Script:LicenseGroupCache.GroupsByGuid[$groupGuid]
+        $group = $Script:LicenseGroupCache.GroupsByGuid[$guid]
         if ($null -eq $group)
         {
             throw 'Unknown license group'
@@ -198,25 +188,37 @@ function Set-RmLicenseGroupMembership
         {
             throw 'Cannot add a user to a dynamic license group'
         }
-        if ($currentMemberships.ContainsKey($group.Guid))
+        $requestedLicenseGroups.Add($group.Guid, $group)
+    }
+    $currentLicenseGroups = @{}
+    foreach ($dn in $adUser.MemberOf)
         {
-            continue
+        $group = $Script:LicenseGroupCache.GroupsByDn[$dn]
+        if ($null -ne $group)
+        {
+            $currentLicenseGroups.Add($group.Guid, $group)
         }
-        foreach ($memberGroup in $currentMemberships.Values)
+    }
+    $removeFrom = @()
+    foreach ($group in $currentLicenseGroups.Values)
         {
-            if ($memberGroup.Category -eq $group.Category)
+        if (-not $requestedLicenseGroups.ContainsKey($group.Guid))
             {
-                if ($memberGroup.Dynamic)
+            if ($group.Dynamic)
                 {
                     throw 'Cannot remove a user from a dynamic license group'
                 }
-                $removeFrom += $memberGroup
+            $removeFrom += $group
             }
         }
+    $addTo = @()
+    foreach ($group in $requestedLicenseGroups.Values)
+    {
+        if (-not $currentLicenseGroups.ContainsKey($group.Guid))
+        {
         $addTo += $group
     }
-    if (Compare-Object -ReferenceObject $addTo -DifferenceObject $removeFrom -Property 'Guid')
-    {
+    }
         foreach ($group in $removeFrom)
         {
             Remove-ADGroupMember -Identity $group.Dn -Members $adUser.DistinguishedName -Confirm:$false
@@ -224,7 +226,6 @@ function Set-RmLicenseGroupMembership
         foreach ($group in $addTo)
         {
             Add-ADGroupMember -Identity $group.Dn -Members $adUser.DistinguishedName
-        }
     }
 }
 
