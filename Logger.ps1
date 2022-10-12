@@ -19,7 +19,9 @@ function Update-TaskLogEntry
         [TaskResult]
         $Result,
         [switch]
-        $EndTask
+        $EndTask,
+        [string]
+        $Details
     )
     process
     {
@@ -35,6 +37,7 @@ function Update-TaskLogEntry
             TaskId = $TaskId
             Status = $Result.ToString()
             End = $end
+            Details = $Details
         }
     }
 }
@@ -49,7 +52,9 @@ function New-TaskLogEntry
         [string]
         $Target,
         [TaskResult]
-        $Result
+        $Result,
+        [string]
+        $Details
     )
     process
     {
@@ -63,6 +68,7 @@ function New-TaskLogEntry
                 TaskId = $id
                 Status = $Result.ToString()
                 End = 1
+                Details = $Details
             }
         }
         else
@@ -189,24 +195,37 @@ function Invoke-StoredProcedure
     )
     process
     {
-        $conn = New-Object -TypeName 'System.Data.SqlClient.SqlConnection'
-        $conn.ConnectionString = $Script:Config.Logger.ConnectionString
-        $conn.Open()
-        $cmd = New-Object -TypeName 'System.Data.SqlClient.SqlCommand'
-        $cmd.Connection = $conn
-        $cmd.CommandText = $Procedure
-        $cmd.CommandType = [System.Data.CommandType]::StoredProcedure
-        foreach ($key in $Parameters.Keys)
+        try
         {
-            [void]$cmd.Parameters.AddWithValue($key, $Parameters[$key])
+            $conn = New-Object -TypeName 'System.Data.SqlClient.SqlConnection'
+            $conn.ConnectionString = $Script:Config.Logger.ConnectionString
+            $conn.Open()
+            $cmd = New-Object -TypeName 'System.Data.SqlClient.SqlCommand'
+            $cmd.Connection = $conn
+            $cmd.CommandText = $Procedure
+            $cmd.CommandType = [System.Data.CommandType]::StoredProcedure
+            foreach ($key in $Parameters.Keys)
+            {
+                [void]$cmd.Parameters.AddWithValue($key, $Parameters[$key])
+            }
+            if ($Scalar)
+            {
+                $cmd.ExecuteScalar()
+            }
+            else
+            {
+                [void]$cmd.ExecuteNonQuery()
+            }
         }
-        if ($Scalar)
-        {
-            $cmd.ExecuteScalar()
-        }
-        else
-        {
-            [void]$cmd.ExecuteNonQuery()
+        finally {
+            if ($conn)
+            {
+                $conn.Dispose()
+            }
+            if ($cmd)
+            {
+                $cmd.Dispose()
+            }
         }
     }
 }

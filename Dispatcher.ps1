@@ -138,7 +138,7 @@ function Start-Task
 
 # CarLicense contains the task objects serialized as json
 $params = @{
-    Filter = "CarLicense -like '*' -and Enabled -eq 'True'"
+    Filter = "CarLicense -like '*' -and (Enabled -eq 'True' -or (Enabled -eq 'False' -and AccountExpirationDate -le '$([DateTime]::Now.ToString('yyyy-MM-dd HH:mm:ss'))'))"
     Properties = @(
         'Department'
         'DisplayName'
@@ -225,7 +225,7 @@ foreach ($user in $users)
                 catch
                 {
                     Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.CarLicense
-                    Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask
+                    Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask -Details $_.Exception.ToString()
                     break
                 }
                 if ($result -eq [TaskResult]::Success)
@@ -259,7 +259,7 @@ foreach ($user in $users)
             catch
             {
                 Write-ErrorLog -ErrorRecord $_ -TaskId $currentTask.Id -Target $user.UserPrincipalName -TaskJson $user.CarLicense
-                Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask
+                Update-TaskLogEntry -TaskId $currentTask.Id -Result ([TaskResult]::Failure) -EndTask -Details $_.Exception.ToString()
                 continue
             }
             if ($result -eq [TaskResult]::Wait)
