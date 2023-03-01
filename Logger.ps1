@@ -179,6 +179,11 @@ function Get-ErrorText
 "@ -f (Get-Date), $idString, $Target, $Message, $ScriptStackTrace, $TaskJson
 }
 
+function Close-UnclosedFailedTasks
+{
+    Invoke-StoredProcedure -Procedure 'dbo.spRmLogCleanup'
+}
+
 function Invoke-StoredProcedure
 {
     param
@@ -186,7 +191,7 @@ function Invoke-StoredProcedure
         [Parameter(Mandatory = $true)]
         [string]
         $Procedure,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [object]
         $Parameters,
         [Parameter(Mandatory = $false)]
@@ -204,9 +209,12 @@ function Invoke-StoredProcedure
             $cmd.Connection = $conn
             $cmd.CommandText = $Procedure
             $cmd.CommandType = [System.Data.CommandType]::StoredProcedure
-            foreach ($key in $Parameters.Keys)
+            if ($Parameters)
             {
-                [void]$cmd.Parameters.AddWithValue($key, $Parameters[$key])
+                foreach ($key in $Parameters.Keys)
+                {
+                    [void]$cmd.Parameters.AddWithValue($key, $Parameters[$key])
+                }
             }
             if ($Scalar)
             {

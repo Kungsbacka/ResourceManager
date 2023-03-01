@@ -277,10 +277,10 @@ foreach ($user in $users)
     # while the tasks were executed, we assume someone didn't want to execute the remaining tasks.
     try
     {
-        $user2 = Get-ADUser -Filter "ObjectGuid -eq '$($user.Identity)'" -Properties 'CarLicense'
+        $user2 = Get-ADUser -Filter "ObjectGuid -eq '$($user.Identity)' -and CarLicense -like '*'" -Properties 'CarLicense'
         if ($null -eq $user2)
         {
-            exit
+            continue
         }
         if ($remainingTasks.Count -gt 0)
         {
@@ -301,3 +301,6 @@ foreach ($user in $users)
         Write-ErrorLog -ErrorRecord $_ -Target $user.UserPrincipalName
     }
 }
+
+# Clean up stale log entries
+Close-UnclosedFailedTasks
