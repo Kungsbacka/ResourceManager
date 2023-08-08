@@ -19,6 +19,10 @@ function Get-SamlIdFromPool
     }
     finally
     {
+        if ($rdr) {
+            $rdr.Dispose()
+            $rdr = $null
+        }
         if ($cmd)
         {
             $cmd.Dispose()
