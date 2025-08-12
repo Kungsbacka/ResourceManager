@@ -341,16 +341,35 @@ function Restore-RmLicenseGroupMembership
         [switch]
         $SkipSyncCheck
     )
-    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('msDS-cloudExtensionAttribute1','extensionAttribute11')
+    $adUser = Get-ADUser -Identity $SamAccountName -Properties @('msDS-cloudExtensionAttribute1','extensionAttribute11','memberOf')
     if (-not $SkipSyncCheck -and $null -eq $adUser.extensionAttribute11)
     {
         throw 'User is not synced to AzureAD'
+        return
     }
+
     if ($null -eq $adUser.'msDS-cloudExtensionAttribute1')
     {
-        throw 'User has no stashed licenses in msDS-cloudExtensionAttribute1'
+        $isMemberOfLicenseGroup = $false
+        foreach($group in $adUser.memberOf) {
+            $licenseGroup = $Script:LicenseGroupCache.GroupsByDn[$group]
+            if ($null -ne $licenseGroup -and $licenseGroup.Category -eq 'A' -and $licenseGroup.MailEnabled) {
+                $isMemberOfLicenseGroup = $true
+                break
+            }
+        }
+        
+        if (-not $isMemberOfLicenseGroup)
+        {
+            throw 'User has no stashed licenses in msDS-cloudExtensionAttribute1 and is not a member of a mail-enabled license group.'
+            return
+        }
+        
     }
-    $deserializedLicenses = $adUser.'msDS-cloudExtensionAttribute1' -split ','
-    Set-RmLicenseGroupMembership -SamAccountName $SamAccountName -LicenseGroups $deserializedLicenses -SkipDynamicGroupCheck -SkipSyncCheck:$SkipSyncCheck
-    Set-ADUser -Identity $SamAccountName -Clear 'msDS-cloudExtensionAttribute1'
+    else
+    {
+        $deserializedLicenses = $adUser.'msDS-cloudExtensionAttribute1' -split ','
+        Set-RmLicenseGroupMembership -SamAccountName $SamAccountName -LicenseGroups $deserializedLicenses -SkipDynamicGroupCheck -SkipSyncCheck:$SkipSyncCheck
+        Set-ADUser -Identity $SamAccountName -Clear 'msDS-cloudExtensionAttribute1'
+    }
 }
