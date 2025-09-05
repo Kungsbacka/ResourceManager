@@ -136,6 +136,9 @@ function Start-Task
     }
 }
 
+# Clean up cached ExchangeOnlineModule to avoid running out of diskspace
+Get-ChildItem "$($env:TEMP)\tmpEXO_*" | Remove-Item -Recurse -Force
+
 # CarLicense contains the task objects serialized as json
 $params = @{
     Filter = "CarLicense -like '*' -and (Enabled -eq 'True' -or (Enabled -eq 'False' -and AccountExpirationDate -le '$([DateTime]::Now.ToString('yyyy-MM-dd HH:mm:ss'))'))"
