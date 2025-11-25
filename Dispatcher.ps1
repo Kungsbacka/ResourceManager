@@ -138,6 +138,7 @@ function Start-Task
 
 # Clean up cached ExchangeOnlineModule to avoid running out of diskspace
 Get-ChildItem "$($env:TEMP)\tmpEXO_*" | Remove-Item -Recurse -Force
+Get-ChildItem "$($env:TEMP)\tmp_*" | Remove-Item -Recurse -Force
 
 # CarLicense contains the task objects serialized as json
 $params = @{
