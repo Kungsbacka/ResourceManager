@@ -107,24 +107,6 @@
         Parameters = @()
         OptionalParameters = @()
     }
-    MsolLicense = @{
-        Command = 'Set-RmMsolUserLicense'
-        Initializer = 'Connect-KBAAzureAD'
-        Parameters = @('License')
-        OptionalParameters = @()
-    }
-    MsolRemoveLicense = @{
-        Command = 'Remove-RmMsolUserLicense'
-        Initializer = 'Connect-KBAAzureAD'
-        Parameters = @()
-        OptionalParameters = @()
-    }
-    MsolRestoreLicense = @{
-        Command = 'Restore-RmMsolUserLicense'
-        Initializer = 'Connect-KBAAzureAD'
-        Parameters = @()
-        OptionalParameters = @()
-    }
     MsolLicenseGroup = @{
         Command = 'Set-RmLicenseGroupMembership'
         Initializer = 'Update-LicenseGroupCache'
