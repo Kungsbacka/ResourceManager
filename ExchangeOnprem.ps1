@@ -403,8 +403,10 @@ function Enable-RmOnpremRemoteMailbox
     }
     if ($result -eq [TestMailboxResult]::Remote)
     {
-        throw 'Target already has a remote mailbox'
+        return # Already has a remote mailbox, nothing to do
     }
+    # This is a cleanup step to remove attributes from mailboxes that existed on-premises before migration to Exchange Online
+    # This step is likely never done since the migration happened a long time ago and there should not be any mailboxes left in this state.
     if ($result -eq [TestMailboxResult]::OnpremDisabled)
     {
         $attrib = @(
@@ -448,12 +450,22 @@ function Disable-RmOnpremMailbox
         [string]
         $UserPrincipalName
     )
+
     $result = Test-KBAOnpremMailbox $UserPrincipalName
-    if ($result -ne [TestMailboxResult]::Onprem)
+    if ($result -eq [TestMailboxResult]::Onprem)
     {
-        throw 'Target account has no on-prem mailbox'
+        $command = 'Disable-OnpremMailbox'
     }
-    Disable-OnpremMailbox -Identity $UserPrincipalName -Confirm:$false | Out-Null
+    elseif ($result -eq [TestMailboxResult]::Remote)
+    {
+        $command = 'Disable-OnpremRemoteMailbox'
+    }
+    else
+    {
+        throw 'Target account has no on-prem or remote mailbox'
+    }
+
+    &$command -Identity $UserPrincipalName -Confirm:$false | Out-Null
 }
 
 function Connect-RmOnpremMailbox
