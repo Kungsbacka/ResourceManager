@@ -143,6 +143,12 @@
         Parameters = @('Group')
         OptionalParameters = @()
     }
+    ClearStashedLicense = @{
+        Command = 'Clear-StashedLicense'
+        Initializer = $null
+        Parameters = @()
+        OptionalParameters = @()
+    }
     Wait = @{
         Command = $null
         Initializer = $null

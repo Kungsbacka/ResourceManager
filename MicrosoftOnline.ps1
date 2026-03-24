@@ -252,3 +252,13 @@ function Restore-RmLicenseGroupMembership {
         Set-ADUser -Identity $SamAccountName -Clear 'msDS-cloudExtensionAttribute1'
     }
 }
+
+function Clear-StashedLicense {
+    param
+    (
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
+        [string]
+        $SamAccountName
+    )
+    Set-ADUser -Identity $SamAccountName -Clear 'msDS-cloudExtensionAttribute1'
+}
