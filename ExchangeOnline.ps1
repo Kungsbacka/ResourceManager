@@ -20,6 +20,7 @@ function Connect-KBAExchangeOnline
         Organization = $Script:Config.ExchangeOnline.Organization
         CommandName = @(
             'Get-EXOMailbox'
+            'Set-CASMailbox'
             'Set-Mailbox'
             'Set-MailboxRegionalConfiguration'
         )
@@ -123,6 +124,13 @@ function Set-RmOnlineMailbox
         AuditEnabled = $true
     }
     Set-OnlineMailbox @params
+
+    # Disable ActiveSync for all mailbox types since it is not used and can be a security risk if left enabled
+    $params = @{
+        Identity = $UserPrincipalName
+        ActiveSyncEnabled = $false
+    }
+    Set-CASMailbox @params
 }
 
 function Set-RmOnlineMailboxType
