@@ -130,7 +130,7 @@ function Set-RmOnlineMailbox
         Identity = $UserPrincipalName
         ActiveSyncEnabled = $false
     }
-    Set-CASMailbox @params
+    Set-OnlineCASMailbox @params
 }
 
 function Set-RmOnlineMailboxType
