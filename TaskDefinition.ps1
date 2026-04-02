@@ -14,7 +14,7 @@
     DisableMailbox = @{
         Command = 'Disable-RmOnpremMailbox'
         Initializer = 'Connect-KBAExchangeOnprem'
-        Parameters = @()
+        Parameters = @('KeepSyncing')
         OptionalParameters = @()
     }
     ConnectMailbox = @{

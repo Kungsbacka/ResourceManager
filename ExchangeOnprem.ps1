@@ -1,4 +1,6 @@
-﻿# Make all error terminating errors
+﻿# Make all errors terminate. Do *not* change this since that will
+# most likely mess up error handling (errors not being caught and
+# continued code execution after a throw).
 $Global:ErrorActionPreference = 'Stop'
 
 Enum TestMailboxResult
@@ -43,6 +45,7 @@ function Connect-KBAExchangeOnprem
         CommandName = @(
             'Connect-Mailbox'
             'Disable-Mailbox'
+            'Disable-RemoteMailbox'
             'Enable-Mailbox'
             'Enable-RemoteMailbox'
             'Get-Mailbox'
@@ -448,24 +451,41 @@ function Disable-RmOnpremMailbox
     (
         [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
         [string]
-        $UserPrincipalName
+        $UserPrincipalName,
+        [Parameter(Mandatory=$true,ValueFromPipelineByPropertyName=$true)]
+        [string]
+        $SamAccountName,
+        [Parameter(Mandatory=$false,ValueFromPipelineByPropertyName=$true)]
+        [switch]
+        $KeepSyncing
     )
-
     $result = Test-KBAOnpremMailbox $UserPrincipalName
+    if ($result -ne [TestMailboxResult]::Onprem -and $result -ne [TestMailboxResult]::Remote)
+    {
+        throw 'Target account has no mailbox'
+    }
+
+    # Extension attributes are cleared by Disable-Mailbox/Disable-RemoteMailbox, so we fetch them
+    # before we disable so we can add them back after we disabled.
+    $user = Get-ADUser -Identity $SamAccountName -Properties 'ExtensionAttribute11','ExtensionAttribute15'
+
     if ($result -eq [TestMailboxResult]::Onprem)
     {
-        $command = 'Disable-OnpremMailbox'
+        Disable-OnpremMailbox -Identity $UserPrincipalName -Confirm:$false | Out-Null
     }
     elseif ($result -eq [TestMailboxResult]::Remote)
     {
-        $command = 'Disable-OnpremRemoteMailbox'
-    }
-    else
-    {
-        throw 'Target account has no on-prem or remote mailbox'
+        Disable-OnpremRemoteMailbox -Identity $UserPrincipalName -Confirm:$false | Out-Null
+        if ($KeepSyncing -and $null -ne $user.ExtensionAttribute11)
+        {
+            Set-ADUser -Identity $SamAccountName -Replace @{'ExtensionAttribute11' = $user.ExtensionAttribute11}
+        }
     }
 
-    &$command -Identity $UserPrincipalName -Confirm:$false | Out-Null
+    if ($null -ne $user.ExtensionAttribute15)
+    {
+        Set-ADUser -Identity $SamAccountName -Replace @{'ExtensionAttribute15' = $user.ExtensionAttribute15}
+    }
 }
 
 function Connect-RmOnpremMailbox
